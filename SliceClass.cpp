@@ -16,7 +16,6 @@ using namespace std;
 class LoamPt
 {
 public:
-	//std::vector<double> xyz;
 	Vector3d xyz;
 	int sweepID;
 	int sliceID;
@@ -31,10 +30,6 @@ public:
 	LoamPt(const double x, const double y, const double z, const double time);
 	LoamPt(const LoamPt &otherPt);
 	LoamPt &operator = (const LoamPt &otherPt);
-	//std::vector<double> Minus(const LoamPt &otherPt);
-	//std::vector<double> Minus(const std::vector<double> &otherPt);
-
-	//static inline int Size(const std::vector<double> &xyz);
 
 	bool SetXYZ(const std::vector<double> &newXYZ);
 
@@ -45,7 +40,6 @@ public:
 
 	bool Distance(double &dist, LoamPt &otherPt);
 	Vector3d Transform(Matrix4d &xformMatrix4x4);
-	//Vector3d Transform(const std::vector<double[4]> &xformMatrix4x4); // xformMatrix is stored as stacked row-vectors
 	void TransformSelf(Matrix4d &xformMatrix4x4); // xformMatrix is stored as stacked row-vectors
 };
 
@@ -131,8 +125,6 @@ bool LoamPt::Distance(double &dist, LoamPt &otherPt)
 
 bool LoamPt::SetXYZ(const std::vector<double> &newXYZ)
 {
-	//int size = Size(newXYZ);
-	//std::cout << size << std::endl;
 	if (newXYZ.size() == 3)
 	{
 		// point is set to new value and declared filled
@@ -175,7 +167,6 @@ Vector3d LoamPt::Transform(Matrix4d &xformMatrix4x4)
 	return { newVec[0], newVec[1], newVec[2] };
 }
 
-
 void LoamPt::TransformSelf(Matrix4d &xformMatrix4x4)
 {
 	// assumes the 4x4 matrix is filled/correct
@@ -190,7 +181,6 @@ void LoamPt::TransformSelf(Matrix4d &xformMatrix4x4)
 		std::cout << "Tried transforming an unfilled point" << std::endl;
 	}
 }
-
 
 class Sweep
 {
@@ -458,7 +448,6 @@ bool Sweep::EvaluatePlane(int sliceIdx, std::vector<double> &potentialPt) // Che
 //	return JacobianFull;
 //}
 
-
 int main(void)
 {
 
@@ -478,16 +467,12 @@ int main(void)
 
 	std::cout << "Size of this point = " << pt1.size() << std::endl;
 
-
-
-
 	Sweep NewSweep;
 
 	for (int i = 0; i < 5; i++)
 	{
 		NewSweep.AddSlice(0, i, newSlicePoints);
 	}
-
 
 	Vector3d xyz2 = NewSweep.ptCloud[0][6].xyz;
 
@@ -557,6 +542,4 @@ int main(void)
 	testSweep.FindEdges(testSweep.numSlices);
 
 	return 0;
-
-
 }
