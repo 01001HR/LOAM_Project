@@ -307,10 +307,12 @@ public:
 	std::vector<double> timeStamps;						// Vector of time values, where timeStamps[i] is the timeStamp corresponding to slice i of the ptCloud
 	double tStart, tEnd;
 	std::vector<double> transform;
-	int kernalSize = 11, regionPerSlice = 4, edgePerRegion = 2, planePerRegion = 4, edgeFindThreshold = 3;
+	int sweepID, numSlices = -1, kernalSize = 11, regionPerSlice = 4, edgePerRegion = 2, planePerRegion = 4, edgeFindThreshold = 3;
 	Sweep();
 	~Sweep();
+	Sweep(std::vector<std::vector<double>> &inputSlice);
 	void AddSlice(int sweepNumber, int sliceNumber, std::vector<std::vector<double>> &inputSlice);
+	void AddSlice(std::vector<std::vector<double>> &inputSlice);
 	void FindAllEdges();
 	void FindEdges(int sliceIndex);
 	void SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curveVec, int startIdx, int endIdx);
@@ -330,6 +332,12 @@ Sweep::~Sweep()
 
 }
 
+Sweep::Sweep(std::vector<std::vector<double>> &inputSlice)
+{
+	sweepID = NULL;
+	AddSlice(sweepID, numSlices+1, inputSlice);
+}
+
 void Sweep::AddSlice(int sweepNumber, int sliceNumber, std::vector<std::vector<double>> &inputSlice)
 {
 	slices.push_back(SliceVector(sweepNumber, sliceNumber, inputSlice));
@@ -339,6 +347,18 @@ void Sweep::AddSlice(int sweepNumber, int sliceNumber, std::vector<std::vector<d
 		slice.push_back(LoamPt(xyzPt));
 	}
 	ptCloud.push_back(slice);
+	numSlices++;
+}
+
+void Sweep::AddSlice(std::vector<std::vector<double>> &inputSlice)
+{
+	std::vector<LoamPt> slice;
+	for (auto &xyzPt : inputSlice)
+	{
+		slice.push_back(LoamPt(xyzPt));
+	}
+	ptCloud.push_back(slice);
+	numSlices++;
 }
 
 void Sweep::FindEdges(int sliceIdx)
@@ -355,7 +375,7 @@ void Sweep::FindEdges(int sliceIdx)
 	distVec = kernalSize*slice[firstPt].xyz;
 
 	// find distance vector for initial point
-	for (int i = -kernalSize / 2; i < kernalSize / 2; i++)
+	for (int i = -(kernalSize / 2); i < (kernalSize / 2) + 1; i++)
 	{
 		distVec -= slice[firstPt + i].xyz;
 	}
@@ -365,7 +385,7 @@ void Sweep::FindEdges(int sliceIdx)
 	// calculate curvature values for all points after the first point
 	for (int i = firstPt + 1; i < lastPt; i++)
 	{
-		distVec = distVec - kernalSize*(slice[i-1].xyz - slice[i].xyz) + slice[i + kernalSize / 2].xyz - slice[i - kernalSize / 2].xyz;
+		distVec = distVec - kernalSize*(slice[i-1].xyz - slice[i].xyz) - slice[i + kernalSize / 2].xyz + slice[i - kernalSize / 2 - 1].xyz;
 		curvatures[i] = { distVec.norm() / slice[i].xyz.norm(), (double)i };
 	}
 
@@ -384,7 +404,7 @@ void Sweep::SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curve
 	// get subset of curvature values corresponding to region between startIdx, endIdx
 	for (int i = 0; i < endIdx-startIdx; i++)
 	{
-		curvatures[i] = curveVec[i];
+		curvatures[i] = curveVec[startIdx + i];
 	}
 
 	// sort the curvature vector
@@ -402,7 +422,6 @@ void Sweep::SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curve
 			if (FindBestEdgePt(sliceIdx, curvatures) == true)
 			{
 				edges++;
-				planeTurn = true;
 			}
 		}
 		// try to find plane point
@@ -411,9 +430,9 @@ void Sweep::SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curve
 			if (FindBestPlanePt(sliceIdx, curvatures) == true)
 			{
 				planes++;
-				planeTurn = false;
 			}
 		}
+		planeTurn = !planeTurn;
 	}
 }
 
@@ -421,16 +440,13 @@ bool Sweep::FindBestEdgePt(int sliceIdx, std::vector<std::vector<double>> &curve
 {
 	// best edges have highest curvature values
 	std::vector<double> pt;
-	while (curveVec.size() > 0)
+	pt = curveVec[curveVec.size()-1];
+	curveVec.erase(curveVec.end()-1);
+	if (EvaluateEdge(sliceIdx, pt) == true) // valid edge point
 	{
-		pt = curveVec[curveVec.size()];
-		curveVec.erase(curveVec.end());
-		if (EvaluateEdge(sliceIdx, pt) == true) // valid edge point
-		{
-			// save edgePt's {sliceIdx, ptIdx}
-			edgePts[sliceIdx].push_back((int)pt[1]);
-			return true;
-		}
+		// save edgePt's {sliceIdx, ptIdx}
+		edgePts[sliceIdx].push_back((int)pt[1]);
+		return true;
 	}
 	return false;
 }
@@ -439,26 +455,30 @@ bool Sweep::FindBestPlanePt(int sliceIdx, std::vector<std::vector<double>> &curv
 {
 	// best planes have low curvature values
 	std::vector<double> pt;
-	while (curveVec.size() != 0)
+	pt = curveVec[0];
+	curveVec.erase(curveVec.begin());
+	if (EvaluatePlane(sliceIdx, pt) == true) // valid plane point
 	{
-		pt = curveVec[0];
-		curveVec.erase(curveVec.begin());
-		if (EvaluatePlane(sliceIdx, pt) == true) // valid plane point
-		{
-			// save planePt's {sliceIdx, ptIdx}
-			planePts[sliceIdx].push_back((int)pt[1]);
-			return true;
-		}
+		// save planePt's {sliceIdx, ptIdx}
+		planePts[sliceIdx].push_back((int)pt[1]);
+		return true;
 	}
 	return false;
 }
 
 bool Sweep::EvaluateEdge(int sliceIdx, std::vector<double> &potentialPt) // Checks to make sure that no nearby points are drastically closer to the sensor
 {
-	double ptDist = ptCloud[sliceIdx][potentialPt[1]].xyz.norm();
-	for (int i = -2; i < 2; i++)
+	double ptDist = ptCloud[sliceIdx][potentialPt[1]].xyz[0]; // treating ptDist[0] = X, the depth-distance w.r.t. sensor
+	for (int i = -(kernalSize/2); i < 0; i++)
 	{
-		if (ptCloud[sliceIdx][potentialPt[1]+i].xyz.norm() - ptDist > edgeFindThreshold) // nearby point is x (meters) closer to the sensor
+		if ((ptCloud[sliceIdx][potentialPt[1] + i + 1].xyz[0] - ptCloud[sliceIdx][potentialPt[1]+i].xyz[0]) > edgeFindThreshold) // large increase in distance as we approach the potential point == occlusion
+		{
+			return false;
+		}
+	}
+	for (int i = 1; i < (kernalSize / 2) + 1; i++)
+	{
+		if ((ptCloud[sliceIdx][potentialPt[1] + i + 1].xyz[0] - ptCloud[sliceIdx][potentialPt[1] + i].xyz[0]) < -edgeFindThreshold) // large decrease in distance as we move away from the potential point == occlusion
 		{
 			return false;
 		}
@@ -568,25 +588,36 @@ int main(void)
 
 	for (double i = 0; i < 100; i++)
 	{
+		std::cout << (int)i / 25 << std::endl;
 		switch((int)i/25)
 		{
 		case 0:
-			testSlice.push_back({ 50,0,i / 10 });
+			testSlice.push_back({ 50.0,0.0,i - 50});
+			continue;
 		case 1:
-			testSlice.push_back({ 50 + i, 0, i / 10 });
+			testSlice.push_back({ 50.0 + i-25, 0, i - 50 });
+			continue;
 		case 2:
-			testSlice.push_back({ 50 + 50 - i, 0, i / 10 });
+			testSlice.push_back({ 50.0 + 100.0, 0.0, i - 50 });
+			continue;
 		case 3:
-			testSlice.push_back({ 50 + 25, 0, i / 10 });
+			testSlice.push_back({ 50.0 + 50.0, 0.0, i - 50 });
+			continue;
 		}
 	}
 
+	Sweep testSweep(testSlice);
 
-	Sweep testSweep();
+	for (auto &elem : testSlice)
+	{
+		elem[0] += (double)rand() / RAND_MAX * 2; // add a bit of noise
+	}
 
-	getchat();
+	testSweep.FindEdges(testSweep.numSlices);
 
+	testSweep.AddSlice(testSlice);
 
+	testSweep.FindEdges(testSweep.numSlices);
 
 	return 0;
 }
