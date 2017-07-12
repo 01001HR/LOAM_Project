@@ -191,91 +191,6 @@ void LoamPt::TransformSelf(Matrix4d &xformMatrix4x4)
 	}
 }
 
-//class SliceVector
-//{
-//public:
-//	std::vector<LoamPt> pts;   // vector containing instances of LoamPt class
-//	std::vector<int> edgePts;  // vector holding the indices of points chosen to lie on edges in this slice
-//	std::vector<int> planePts; // vector holding the indices of points chosen to lie in planes in this slice
-//
-//	int vectorIdx, sweepIdx;
-//	double timeStamp;
-//
-//	SliceVector();
-//	~SliceVector();
-//	SliceVector(std::vector<std::vector<double>> &inputSlice);
-//	SliceVector(int sweepNumber, int sliceNumber, std::vector<std::vector<double>> &inputSlice);
-//	void AddPts(std::vector<std::vector<double>> &inputPts);
-//	void FindEdges();
-//	void FindPlanes();
-//	void FindNearest();
-//};
-//
-//SliceVector::SliceVector()
-//{
-//
-//}
-//
-//SliceVector::~SliceVector()
-//{
-//
-//}
-//
-//SliceVector::SliceVector(std::vector<std::vector<double>> &inputSlice)
-//{
-//	AddPts(inputSlice);
-//}
-//
-//SliceVector::SliceVector(int sweepNumber, int sliceNumber, std::vector<std::vector<double>> &inputSlice)
-//{
-//	vectorIdx = sliceNumber;
-//	sweepIdx = sweepNumber;
-//	AddPts(inputSlice);
-//}
-//
-//void SliceVector::AddPts(std::vector<std::vector<double>> &inputPts)
-//{
-//	// expected pt format is {x,y,z,time}
-//
-//	for (auto &elem : inputPts[0])
-//	{
-//		std::cout << elem << std::endl;
-//	}
-//
-//	//std::cout << inputPts[0][0] << std::endl;
-//
-//	//std::vector<double> pt = inputPts[0];
-//	//int size = sizeof(pt) / sizeof(pt[0]);
-//
-//	std::cout << "Input Pt size = " << inputPts[0].size() << std::endl;
-//
-//	if (inputPts[0].size() == 4)
-//	{
-//		for (auto &line : inputPts)
-//		{
-//			pts.push_back(LoamPt({ line[0], line[1], line[2] }, line[3]));
-//		}
-//	}
-//	else if (inputPts[0].size() == 3)
-//	{
-//		for (auto &line : inputPts)
-//		{
-//			pts.push_back(LoamPt({ line[0],line[1],line[2] }));
-//		}
-//	}
-//}
-//
-//void SliceVector::FindEdges()
-//{
-//	std::vector<double> curvatureValues;
-//	double curvature;
-//	for (auto &elem : pts)
-//	{
-//		// run kernal;
-//		// curvature = .......
-//		curvatureValues.push_back(curvature);
-//	}
-//}
 
 class Sweep
 {
@@ -285,10 +200,12 @@ public:
 	std::vector<double> timeStamps;						// Vector of time values, where timeStamps[i] is the timeStamp corresponding to slice i of the ptCloud
 	double tStart, tEnd;
 	VectorXd transform;
-	int kernalSize = 11, regionPerSlice = 4, edgePerRegion = 2, planePerRegion = 4, edgeFindThreshold = 3;
+	int sweepID, numSlices = -1, kernalSize = 11, regionPerSlice = 4, edgePerRegion = 2, planePerRegion = 4, edgeFindThreshold = 3;
 	Sweep();
 	~Sweep();
+	Sweep(std::vector<std::vector<double>> &inputSlice);
 	void AddSlice(int sweepNumber, int sliceNumber, std::vector<std::vector<double>> &inputSlice);
+	void AddSlice(std::vector<std::vector<double>> &inputSlice);
 	void FindAllEdges();
 	void FindEdges(int sliceIndex);
 	void SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curveVec, int startIdx, int endIdx);
@@ -310,6 +227,12 @@ Sweep::~Sweep()
 
 }
 
+Sweep::Sweep(std::vector<std::vector<double>> &inputSlice)
+{
+	sweepID = NULL;
+	AddSlice(sweepID, numSlices+1, inputSlice);
+}
+
 void Sweep::AddSlice(int sweepNumber, int sliceNumber, std::vector<std::vector<double>> &inputSlice)
 {
 	std::vector<LoamPt> slice;
@@ -318,6 +241,18 @@ void Sweep::AddSlice(int sweepNumber, int sliceNumber, std::vector<std::vector<d
 		slice.push_back(LoamPt(xyzPt));
 	}
 	ptCloud.push_back(slice);
+	numSlices++;
+}
+
+void Sweep::AddSlice(std::vector<std::vector<double>> &inputSlice)
+{
+	std::vector<LoamPt> slice;
+	for (auto &xyzPt : inputSlice)
+	{
+		slice.push_back(LoamPt(xyzPt));
+	}
+	ptCloud.push_back(slice);
+	numSlices++;
 }
 
 void Sweep::FindEdges(int sliceIdx)
@@ -334,7 +269,7 @@ void Sweep::FindEdges(int sliceIdx)
 	distVec = kernalSize*slice[firstPt].xyz;
 
 	// find distance vector for initial point
-	for (int i = -kernalSize / 2; i < kernalSize / 2; i++)
+	for (int i = -(kernalSize / 2); i < (kernalSize / 2) + 1; i++)
 	{
 		distVec -= slice[firstPt + i].xyz;
 	}
@@ -344,7 +279,7 @@ void Sweep::FindEdges(int sliceIdx)
 	// calculate curvature values for all points after the first point
 	for (int i = firstPt + 1; i < lastPt; i++)
 	{
-		distVec = distVec - kernalSize*(slice[i-1].xyz - slice[i].xyz) + slice[i + kernalSize / 2].xyz - slice[i - kernalSize / 2].xyz;
+		distVec = distVec - kernalSize*(slice[i-1].xyz - slice[i].xyz) - slice[i + kernalSize / 2].xyz + slice[i - kernalSize / 2 - 1].xyz;
 		curvatures[i] = { distVec.norm() / slice[i].xyz.norm(), (double)i };
 	}
 
@@ -363,7 +298,7 @@ void Sweep::SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curve
 	// get subset of curvature values corresponding to region between startIdx, endIdx
 	for (int i = 0; i < endIdx-startIdx; i++)
 	{
-		curvatures[i] = curveVec[i];
+		curvatures[i] = curveVec[startIdx + i];
 	}
 
 	// sort the curvature vector
@@ -381,7 +316,6 @@ void Sweep::SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curve
 			if (FindBestEdgePt(sliceIdx, curvatures) == true)
 			{
 				edges++;
-				planeTurn = true;
 			}
 		}
 		// try to find plane point
@@ -390,9 +324,9 @@ void Sweep::SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curve
 			if (FindBestPlanePt(sliceIdx, curvatures) == true)
 			{
 				planes++;
-				planeTurn = false;
 			}
 		}
+		planeTurn = !planeTurn;
 	}
 }
 
@@ -400,16 +334,13 @@ bool Sweep::FindBestEdgePt(int sliceIdx, std::vector<std::vector<double>> &curve
 {
 	// best edges have highest curvature values
 	std::vector<double> pt;
-	while (curveVec.size() > 0)
+	pt = curveVec[curveVec.size()-1];
+	curveVec.erase(curveVec.end()-1);
+	if (EvaluateEdge(sliceIdx, pt) == true) // valid edge point
 	{
-		pt = curveVec[curveVec.size()];
-		curveVec.erase(curveVec.end());
-		if (EvaluateEdge(sliceIdx, pt) == true) // valid edge point
-		{
-			// save edgePt's {sliceIdx, ptIdx}
-			edgePts[sliceIdx].push_back((int)pt[1]);
-			return true;
-		}
+		// save edgePt's {sliceIdx, ptIdx}
+		edgePts[sliceIdx].push_back((int)pt[1]);
+		return true;
 	}
 	return false;
 }
@@ -418,26 +349,30 @@ bool Sweep::FindBestPlanePt(int sliceIdx, std::vector<std::vector<double>> &curv
 {
 	// best planes have low curvature values
 	std::vector<double> pt;
-	while (curveVec.size() != 0)
+	pt = curveVec[0];
+	curveVec.erase(curveVec.begin());
+	if (EvaluatePlane(sliceIdx, pt) == true) // valid plane point
 	{
-		pt = curveVec[0];
-		curveVec.erase(curveVec.begin());
-		if (EvaluatePlane(sliceIdx, pt) == true) // valid plane point
-		{
-			// save planePt's {sliceIdx, ptIdx}
-			planePts[sliceIdx].push_back((int)pt[1]);
-			return true;
-		}
+		// save planePt's {sliceIdx, ptIdx}
+		planePts[sliceIdx].push_back((int)pt[1]);
+		return true;
 	}
 	return false;
 }
 
 bool Sweep::EvaluateEdge(int sliceIdx, std::vector<double> &potentialPt) // Checks to make sure that no nearby points are drastically closer to the sensor
 {
-	double ptDist = ptCloud[sliceIdx][potentialPt[1]].xyz.norm();
-	for (int i = -2; i < 2; i++)
+	double ptDist = ptCloud[sliceIdx][potentialPt[1]].xyz[0]; // treating ptDist[0] = X, the depth-distance w.r.t. sensor
+	for (int i = -(kernalSize/2); i < 0; i++)
 	{
-		if (ptCloud[sliceIdx][potentialPt[1]+i].xyz.norm() - ptDist > edgeFindThreshold) // nearby point is x (meters) closer to the sensor
+		if ((ptCloud[sliceIdx][potentialPt[1] + i + 1].xyz[0] - ptCloud[sliceIdx][potentialPt[1]+i].xyz[0]) > edgeFindThreshold) // large increase in distance as we approach the potential point == occlusion
+		{
+			return false;
+		}
+	}
+	for (int i = 1; i < (kernalSize / 2) + 1; i++)
+	{
+		if ((ptCloud[sliceIdx][potentialPt[1] + i + 1].xyz[0] - ptCloud[sliceIdx][potentialPt[1] + i].xyz[0]) < -edgeFindThreshold) // large decrease in distance as we move away from the potential point == occlusion
 		{
 			return false;
 		}
@@ -466,188 +401,162 @@ bool Sweep::EvaluatePlane(int sliceIdx, std::vector<double> &potentialPt) // Che
 	}
 }
 
-double Sweep::Distance2(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int &EnPflag) {
-	// EnPflag = 1: Edge | EnPflag = 2: Plane
-	Vector3d xi = pt.xyz;
-	Vector3d xj = OldSweep.ptCloud[pt.nearPt1[0]][pt.nearPt1[1]].xyz;
-	Vector3d xl = OldSweep.ptCloud[pt.nearPt2[0]][pt.nearPt2[1]].xyz;
-	Vector3d T_trans, T_rot, omega, xi_hat;
-	//VectorXd EstTransform = OldSweep.transform;
-	Matrix3d eye3, omega_hat, R;
-	double theta = T_rot.norm(), Distance;
-
-	T_trans << EstTransform(0), EstTransform(1), EstTransform(2);
-	T_rot << EstTransform(3), EstTransform(4), EstTransform(5);
-	omega << EstTransform(3)/theta, EstTransform(4)/theta, EstTransform(5)/theta;
-	eye3 << 1, 0, 0, 0, 1, 0, 0, 0, 1;
-	omega_hat << 0, -omega(2), omega(1),
-		         omega(2), 0, -omega(0),
-	         	-omega(1), omega(0), 0;
-	R = eye3 + omega_hat*sin(theta) + omega_hat*omega_hat*(1 - cos(theta));
-	R.transposeInPlace();
-	xi_hat = R*(xi - T_trans);
-
-	if (EnPflag == 1) {
-		Distance = ((xi_hat - xj).cross(xi_hat - xl)).norm() / (xj - xl).norm();
-	}
-	else if (EnPflag == 2) {
-		Vector3d xm = OldSweep.ptCloud[pt.nearPt3[0]][pt.nearPt3[1]].xyz;
-		Distance = abs((xi_hat - xj).dot((xj - xl).cross(xj - xm))) / ((xj - xl).cross(xj - xm)).norm();
-	}
-	else {
-		cout << "Edge or Plane indicator not provided!" << endl;
-	}
-
-	return Distance;
-}
-
-MatrixXd Sweep::GetJacobian(Sweep &OldSweep) {
-	MatrixXd JacobianFull, JacobianRow(1, 6);
-	VectorXd EstTransform = OldSweep.transform, EstTransform_Delta;
-	double Delta = pow(10, -6);
-	int cnt = 0;
-	int EnPflag = 1;
-	for (int i = 0; i < OldSweep.edgePts.size(); i++) {
-		for (auto &entry : edgePts[i]) {
-			for (int col = 0; col < 6; col++) {
-				EstTransform_Delta = EstTransform;
-				EstTransform_Delta(col) = EstTransform(col) + Delta;
-				JacobianRow(0, col) = (Distance2(OldSweep.ptCloud[i][entry], OldSweep, EstTransform_Delta, EnPflag) - 
-					Distance2(OldSweep.ptCloud[i][entry], OldSweep, EstTransform, EnPflag)) / Delta;
-			}
-			JacobianFull << JacobianFull, JacobianRow;
-		}
-		
-	}
-
-	return JacobianFull;
-}
-
-//double Sweep::Distance2Plane(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform) {
-//	
+//double Sweep::Distance2(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int &EnPflag) {
+//	// EnPflag = 1: Edge | EnPflag = 2: Plane
 //	Vector3d xi = pt.xyz;
 //	Vector3d xj = OldSweep.ptCloud[pt.nearPt1[0]][pt.nearPt1[1]].xyz;
 //	Vector3d xl = OldSweep.ptCloud[pt.nearPt2[0]][pt.nearPt2[1]].xyz;
-//	Vector3d xm = OldSweep.ptCloud[pt.nearPt3[0]][pt.nearPt3[1]].xyz;
 //	Vector3d T_trans, T_rot, omega, xi_hat;
+//	//VectorXd EstTransform = OldSweep.transform;
 //	Matrix3d eye3, omega_hat, R;
 //	double theta = T_rot.norm(), Distance;
 //
 //	T_trans << EstTransform(0), EstTransform(1), EstTransform(2);
 //	T_rot << EstTransform(3), EstTransform(4), EstTransform(5);
-//	omega << EstTransform(3) / theta, EstTransform(4) / theta, EstTransform(5) / theta;
+//	omega << EstTransform(3)/theta, EstTransform(4)/theta, EstTransform(5)/theta;
 //	eye3 << 1, 0, 0, 0, 1, 0, 0, 0, 1;
 //	omega_hat << 0, -omega(2), omega(1),
-//		omega(2), 0, -omega(0),
-//		-omega(1), omega(0), 0;
+//		         omega(2), 0, -omega(0),
+//	         	-omega(1), omega(0), 0;
 //	R = eye3 + omega_hat*sin(theta) + omega_hat*omega_hat*(1 - cos(theta));
 //	R.transposeInPlace();
 //	xi_hat = R*(xi - T_trans);
-//	Distance = abs((xi_hat - xj).dot((xj - xl).cross(xj - xm))) / ((xj - xl).cross(xj - xm)).norm();
-//	
+//
+//	if (EnPflag == 1) {
+//		Distance = ((xi_hat - xj).cross(xi_hat - xl)).norm() / (xj - xl).norm();
+//	}
+//	else if (EnPflag == 2) {
+//		Vector3d xm = OldSweep.ptCloud[pt.nearPt3[0]][pt.nearPt3[1]].xyz;
+//		Distance = abs((xi_hat - xj).dot((xj - xl).cross(xj - xm))) / ((xj - xl).cross(xj - xm)).norm();
+//	}
+//	else {
+//		cout << "Edge or Plane indicator not provided!" << endl;
+//	}
+//
 //	return Distance;
 //}
 
-//int main(void)
-//{
-//	//char buff[256];
-//	//std::ifstream input("testfile_cube.bin", std::ios::binary);
-//
-//	//while (input.read(buff, sizeof(buff)))
-//	//{
-//	//	std::cout << buff << std::endl;
-//	//}
-//
-//	//std::vector<char> buffer((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
-//
-//	LoamPt myNewPt = LoamPt();
-//	std::vector<double> pt1 = { 1,1,1 }, pt2 = { 0, 1, 0 }, pt3, pt4;
-//
-//	LoamPt filledPt = LoamPt({ 1,1,1 }, 20);
-//	myNewPt.SetXYZ(pt2);
-//
-//	pt3 = filledPt.Minus(myNewPt);
-//	pt4 = filledPt.Minus(pt2);
-//
-//	std::vector<std::vector<double>> newSlicePoints;
-//
-//	for (double i = 0.0; i < 10.0; i++)
-//	{
-//		newSlicePoints.push_back({i,i,i});
-//	}
-//
-//	std::cout << "Size of this point = " << pt1.size() << std::endl;
-//
-//	SliceVector ConstructedSlice(newSlicePoints), AddedSlice;
-//
-//	AddedSlice.AddPts(newSlicePoints);
-//
-//	AddedSlice.AddPts(newSlicePoints);
-//
-//	Sweep NewSweep;
-//
-//	for (int i = 0; i < 5; i++)
-//	{
-//		NewSweep.AddSlice(0, i, newSlicePoints);
-//	}
-//
-//	Vector3d xyz = NewSweep.slices[0].pts[6].xyz;
-//
-//	Vector3d xyz2 = NewSweep.ptCloud[0][6].xyz;
-//
-//	std::cout << "There are " << NewSweep.ptCloud[0].size() << " pts in the first slice of our ptcloud" << std::endl;
-//
-//	double c = Mult(std::vector<double>{ 1, 1, 1 }, std::vector<double>{ 1 });
-//
-//	std::vector<double> &d = Mult(std::vector<double>{ 1, 1, 1 }, 2.0);
-//	std::vector<double> &e = Mult(2.0, std::vector<double>{ 1, 1, 1 });
-//
-//	double a = 5;
-//
-//	double f = Mult(d, e);
-//
-//	std::vector<double> g = Divide(d, 3.0);
-//
-//	double h =  Dist(g);
-//
-//	double hh = Dist(e, g);
-//
-//	std::vector<double> aa = Divide(e, 3.0);
-//
-//	std::vector<std::vector<double>> unsortedVec, sortedVec;
-//
-//	for (int i = 0; i < 16; i++)
-//	{
-//		unsortedVec.push_back({ (double)rand(), (double)i });
-//	}
-//
-//	sortedVec = unsortedVec;
-//
-//	MergeSort(sortedVec);
-//
-//	std::vector<std::vector<double>> testSlice;
-//
-//	for (double i = 0; i < 100; i++)
-//	{
-//		switch((int)i/25)
-//		{
-//		case 0:
-//			testSlice.push_back({ 50,0,i / 10 });
-//		case 1:
-//			testSlice.push_back({ 50 + i, 0, i / 10 });
-//		case 2:
-//			testSlice.push_back({ 50 + 50 - i, 0, i / 10 });
-//		case 3:
-//			testSlice.push_back({ 50 + 25, 0, i / 10 });
+//MatrixXd Sweep::GetJacobian(Sweep &OldSweep) {
+//	MatrixXd JacobianFull, JacobianRow(1, 6);
+//	VectorXd EstTransform = OldSweep.transform, EstTransform_Delta;
+//	double Delta = pow(10, -6);
+//	int cnt = 0;
+//	int EnPflag = 1;
+//	for (int i = 0; i < OldSweep.edgePts.size(); i++) {
+//		for (auto &entry : edgePts[i]) {
+//			for (int col = 0; col < 6; col++) {
+//				EstTransform_Delta = EstTransform;
+//				EstTransform_Delta(col) = EstTransform(col) + Delta;
+//				JacobianRow(0, col) = (Distance2(OldSweep.ptCloud[i][entry], OldSweep, EstTransform_Delta, EnPflag) - 
+//					Distance2(OldSweep.ptCloud[i][entry], OldSweep, EstTransform, EnPflag)) / Delta;
+//			}
+//			JacobianFull << JacobianFull, JacobianRow;
 //		}
+//		
 //	}
 //
-//
-//	Sweep testSweep();
-//
-//	getchar();
-//
-//
-//
-//	return 0;
+//	return JacobianFull;
 //}
+
+
+int main(void)
+{
+
+	LoamPt myNewPt = LoamPt();
+	std::vector<double> pt1 = { 1,1,1 }, pt2 = { 0, 1, 0 }, pt3, pt4;
+
+	LoamPt filledPt = LoamPt({ 1,1,1 }, 20);
+	myNewPt.SetXYZ(pt2);
+
+
+	std::vector<std::vector<double>> newSlicePoints;
+
+	for (double i = 0.0; i < 10.0; i++)
+	{
+		newSlicePoints.push_back({ i,i,i });
+	}
+
+	std::cout << "Size of this point = " << pt1.size() << std::endl;
+
+
+
+
+	Sweep NewSweep;
+
+	for (int i = 0; i < 5; i++)
+	{
+		NewSweep.AddSlice(0, i, newSlicePoints);
+	}
+
+
+	Vector3d xyz2 = NewSweep.ptCloud[0][6].xyz;
+
+	std::cout << "There are " << NewSweep.ptCloud[0].size() << " pts in the first slice of our ptcloud" << std::endl;
+
+	double c = Mult(std::vector<double>{ 1, 1, 1 }, std::vector<double>{ 1 });
+
+	std::vector<double> &d = Mult(std::vector<double>{ 1, 1, 1 }, 2.0);
+	std::vector<double> &e = Mult(2.0, std::vector<double>{ 1, 1, 1 });
+
+	double a = 5;
+
+	double f = Mult(d, e);
+
+	std::vector<double> g = Divide(d, 3.0);
+
+	double h = Dist(g);
+
+	double hh = Dist(e, g);
+
+	std::vector<double> aa = Divide(e, 3.0);
+
+	std::vector<std::vector<double>> unsortedVec, sortedVec;
+
+	for (int i = 0; i < 16; i++)
+	{
+		unsortedVec.push_back({ (double)rand(), (double)i });
+	}
+
+	sortedVec = unsortedVec;
+
+	MergeSort(sortedVec);
+
+	std::vector<std::vector<double>> testSlice;
+
+	for (double i = 0; i < 100; i++)
+	{
+		std::cout << (int)i / 25 << std::endl;
+		switch ((int)i / 25)
+		{
+		case 0:
+			testSlice.push_back({ 50.0,0.0,i - 50 });
+			continue;
+		case 1:
+			testSlice.push_back({ 50.0 + i - 25, 0, i - 50 });
+			continue;
+		case 2:
+			testSlice.push_back({ 50.0 + 100.0, 0.0, i - 50 });
+			continue;
+		case 3:
+			testSlice.push_back({ 50.0 + 50.0, 0.0, i - 50 });
+			continue;
+		}
+	}
+
+	Sweep testSweep(testSlice);
+
+	for (auto &elem : testSlice)
+	{
+		elem[0] += (double)rand() / RAND_MAX * 2; // add a bit of noise
+	}
+
+	testSweep.FindEdges(testSweep.numSlices);
+
+	testSweep.AddSlice(testSlice);
+
+	testSweep.FindEdges(testSweep.numSlices);
+
+	return 0;
+
+
+}
