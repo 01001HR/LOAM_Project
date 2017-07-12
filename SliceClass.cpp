@@ -4,6 +4,7 @@
 #include <iostream>
 #include <math.h>
 #include <Eigen\Core>
+#include <Eigen\Dense>
 #include <random>
 #include <fstream>
 #include <iterator>
@@ -391,40 +392,42 @@ bool Sweep::EvaluatePlane(int sliceIdx, std::vector<double> &potentialPt) // Che
 	}
 }
 
-//double Sweep::Distance2(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int &EnPflag) {
-//	// EnPflag = 1: Edge | EnPflag = 2: Plane
-//	Vector3d xi = pt.xyz;
-//	Vector3d xj = OldSweep.ptCloud[pt.nearPt1[0]][pt.nearPt1[1]].xyz;
-//	Vector3d xl = OldSweep.ptCloud[pt.nearPt2[0]][pt.nearPt2[1]].xyz;
-//	Vector3d T_trans, T_rot, omega, xi_hat;
-//	//VectorXd EstTransform = OldSweep.transform;
-//	Matrix3d eye3, omega_hat, R;
-//	double theta = T_rot.norm(), Distance;
-//
-//	T_trans << EstTransform(0), EstTransform(1), EstTransform(2);
-//	T_rot << EstTransform(3), EstTransform(4), EstTransform(5);
-//	omega << EstTransform(3)/theta, EstTransform(4)/theta, EstTransform(5)/theta;
-//	eye3 << 1, 0, 0, 0, 1, 0, 0, 0, 1;
-//	omega_hat << 0, -omega(2), omega(1),
-//		         omega(2), 0, -omega(0),
-//	         	-omega(1), omega(0), 0;
-//	R = eye3 + omega_hat*sin(theta) + omega_hat*omega_hat*(1 - cos(theta));
-//	R.transposeInPlace();
-//	xi_hat = R*(xi - T_trans);
-//
-//	if (EnPflag == 1) {
-//		Distance = ((xi_hat - xj).cross(xi_hat - xl)).norm() / (xj - xl).norm();
-//	}
-//	else if (EnPflag == 2) {
-//		Vector3d xm = OldSweep.ptCloud[pt.nearPt3[0]][pt.nearPt3[1]].xyz;
-//		Distance = abs((xi_hat - xj).dot((xj - xl).cross(xj - xm))) / ((xj - xl).cross(xj - xm)).norm();
-//	}
-//	else {
-//		cout << "Edge or Plane indicator not provided!" << endl;
-//	}
-//
-//	return Distance;
-//}
+double Sweep::Distance2(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int &EnPflag) {
+	// EnPflag = 1: Edge | EnPflag = 2: Plane
+	Vector3d xi = pt.xyz;
+	Vector3d xj = OldSweep.ptCloud[pt.nearPt1[0]][pt.nearPt1[1]].xyz;
+	Vector3d xl = OldSweep.ptCloud[pt.nearPt2[0]][pt.nearPt2[1]].xyz;
+	Vector3d T_trans, T_rot, omega, xi_hat;
+	//VectorXd EstTransform = OldSweep.transform;
+	Matrix3d eye3, omega_hat, R;
+
+	T_rot << EstTransform(3), EstTransform(4), EstTransform(5);
+	double theta = T_rot.norm(), Distance;
+
+	T_trans << EstTransform(0), EstTransform(1), EstTransform(2);
+	
+	omega << EstTransform(3)/theta, EstTransform(4)/theta, EstTransform(5)/theta;
+	eye3 << 1, 0, 0, 0, 1, 0, 0, 0, 1;
+	omega_hat << 0, -omega(2), omega(1),
+		         omega(2), 0, -omega(0),
+	         	-omega(1), omega(0), 0;
+	R = eye3 + omega_hat*sin(theta) + omega_hat*omega_hat*(1 - cos(theta));
+	R.transposeInPlace();
+	xi_hat = R*(xi - T_trans);
+
+	if (EnPflag == 1) {
+		Distance = ((xi_hat - xj).cross(xi_hat - xl)).norm() / (xj - xl).norm();
+	}
+	else if (EnPflag == 2) {
+		Vector3d xm = OldSweep.ptCloud[pt.nearPt3[0]][pt.nearPt3[1]].xyz;
+		Distance = abs((xi_hat - xj).dot((xj - xl).cross(xj - xm))) / ((xj - xl).cross(xj - xm)).norm();
+	}
+	else {
+		cout << "Edge or Plane indicator not provided!" << endl;
+	}
+
+	return Distance;
+}
 
 //MatrixXd Sweep::GetJacobian(Sweep &OldSweep) {
 //	MatrixXd JacobianFull, JacobianRow(1, 6);
