@@ -1,19 +1,7 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <vector>
-#include <iostream>
-#include <math.h>
-#include <Eigen\Core>
-#include <Eigen\Dense>
-#include <random>
-#include <fstream>
-#include <iterator>
-#include <map>
 #include "Sweep.h"
 
 int main(void)
 {
-
 	LoamPt myNewPt = LoamPt();
 	std::vector<double> pt1 = { 1,1,1 }, pt2 = { 0, 1, 0 }, pt3, pt4;
 

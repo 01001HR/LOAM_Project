@@ -1,5 +1,8 @@
-#pragma once
+#ifndef SWEEP_CLASS
+#define SWEEP_CLASS
+
 #include "LoamPt.h"
+#include "LinearAlgebraFns.h"
 
 class Sweep
 {
@@ -28,3 +31,5 @@ public:
 	void FindNearestEdge(LoamPt &curEdgePt, Sweep &OldSweep);
 	void FindNearestPlane(LoamPt &curPlanePt, Sweep &OldSweep);
 };
+
+#endif // !SWEEP_CLASS

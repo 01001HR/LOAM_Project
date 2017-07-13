@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LIN_ALG_FNS
+#define LIN_ALG_FNS
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -13,7 +14,7 @@
 using namespace Eigen;
 
 template <class numType>
-numType Mult(const std::vector<numType> &v1, const std::vector<numType> &v2)
+inline numType Mult(const std::vector<numType> &v1, const std::vector<numType> &v2)
 {
 	numType product = (numType)0;
 	if (v1.size() == v2.size() && v1.size() > 1)
@@ -32,7 +33,7 @@ numType Mult(const std::vector<numType> &v1, const std::vector<numType> &v2)
 }
 
 template <class numType>
-std::vector<numType> Mult(std::vector<numType> v1, const numType v2)
+inline std::vector<numType> Mult(std::vector<numType> v1, const numType v2)
 {
 	if (v1.size() >= 1)
 	{
@@ -49,7 +50,7 @@ std::vector<numType> Mult(std::vector<numType> v1, const numType v2)
 }
 
 template <class numType>
-std::vector<numType> Mult(const numType v1, std::vector<numType> v2)
+inline std::vector<numType> Mult(const numType v1, std::vector<numType> v2)
 {
 	if (v2.size() >= 1)
 	{
@@ -66,7 +67,7 @@ std::vector<numType> Mult(const numType v1, std::vector<numType> v2)
 }
 
 template <class numType>
-std::vector<numType> Add(std::vector<numType> v1, const std::vector<numType> &v2)
+inline std::vector<numType> Add(std::vector<numType> v1, const std::vector<numType> &v2)
 {
 	if (v1.size() == v2.size() && v1.size() > 1)
 	{
@@ -83,7 +84,7 @@ std::vector<numType> Add(std::vector<numType> v1, const std::vector<numType> &v2
 }
 
 template <class numType>
-std::vector<numType> Add(std::vector<numType> v1, const numType v2)
+inline std::vector<numType> Add(std::vector<numType> v1, const numType v2)
 {
 	if (v1.size() >= 1)
 	{
@@ -100,7 +101,7 @@ std::vector<numType> Add(std::vector<numType> v1, const numType v2)
 }
 
 template <class numType>
-std::vector<numType> Add(const numType v1, std::vector<numType> v2)
+inline std::vector<numType> Add(const numType v1, std::vector<numType> v2)
 {
 	if (v2.size() >= 1)
 	{
@@ -117,7 +118,7 @@ std::vector<numType> Add(const numType v1, std::vector<numType> v2)
 }
 
 template <class numType>
-std::vector<numType> Minus(std::vector<numType> v1, const std::vector<numType> &v2)
+inline std::vector<numType> Minus(std::vector<numType> v1, const std::vector<numType> &v2)
 {
 	std::cout << v1.size() << std::endl;
 	std::cout << "vec subtract" << v1[0] << v1[1] << v1[2] << v2[0] << v2[1] << v2[2] << std::endl;
@@ -137,7 +138,7 @@ std::vector<numType> Minus(std::vector<numType> v1, const std::vector<numType> &
 }
 
 template <class numType>
-std::vector<numType> Minus(std::vector<numType> v1, const numType v2)
+inline std::vector<numType> Minus(std::vector<numType> v1, const numType v2)
 {
 	if (v1.size() >= 1)
 	{
@@ -154,7 +155,7 @@ std::vector<numType> Minus(std::vector<numType> v1, const numType v2)
 }
 
 template <class numType>
-std::vector<numType> Minus(const numType v1, std::vector<numType> v2)
+inline std::vector<numType> Minus(const numType v1, std::vector<numType> v2)
 {
 	if (v2.size() >= 1)
 	{
@@ -171,19 +172,19 @@ std::vector<numType> Minus(const numType v1, std::vector<numType> v2)
 }
 
 template <class numType>
-std::vector<numType> Divide(std::vector<numType> v1, const numType v2)
+inline std::vector<numType> Divide(std::vector<numType> v1, const numType v2)
 {
-	return Mult(v1, (numType)1/v2);
+	return Mult(v1, (numType)1 / v2);
 }
 
 template <class numType>
-std::vector<numType> Divide(const numType v1, std::vector<numType> v2)
+inline std::vector<numType> Divide(const numType v1, std::vector<numType> v2)
 {
 	return Mult((numType)1 / v1, v2);
 }
 
 template <class numType>
-numType Dist(const std::vector<numType> &v1)
+inline numType Dist(const std::vector<numType> &v1)
 {
 	numType dist = (numType)0;
 	for (auto &elem : v1)
@@ -194,12 +195,12 @@ numType Dist(const std::vector<numType> &v1)
 }
 
 template <class numType>
-numType Dist(std::vector<numType> v1, const std::vector<numType> &v2)
+inline numType Dist(std::vector<numType> v1, const std::vector<numType> &v2)
 {
 	return Dist(Minus(v1, v2));
 }
 
-void Merge(std::vector<std::vector<double>> &incomingArray, int idx1, int end1, int idx2, int end2)
+inline void Merge(std::vector<std::vector<double>> &incomingArray, int idx1, int end1, int idx2, int end2)
 {
 	std::vector<std::vector<double>> sortedArray; // initial allocation, numbers will be changed during sorting
 	int firstIdx = idx1, lastIdx = end2;
@@ -242,7 +243,7 @@ void Merge(std::vector<std::vector<double>> &incomingArray, int idx1, int end1, 
 	}
 }
 
-void MergeSort(std::vector<std::vector<double>> &vec)
+inline void MergeSort(std::vector<std::vector<double>> &vec)
 {
 	int size = 1;
 	int len = vec.size();
@@ -270,3 +271,5 @@ void MergeSort(std::vector<std::vector<double>> &vec)
 		size *= 2;
 	}
 }
+
+#endif
