@@ -154,3 +154,4 @@ void LoamPt::TransformSelf(Matrix4d &xformMatrix4x4)
 		std::cout << "Tried transforming an unfilled point" << std::endl;
 	}
 }
+

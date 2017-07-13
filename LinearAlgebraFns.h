@@ -6,10 +6,13 @@
 #include <vector>
 #include <iostream>
 #include <math.h>
-#include <Eigen\Core>
 #include <random>
 #include <fstream>
 #include <iterator>
+#include <Eigen\Core>
+#include <Eigen\Dense>
+#include <Eigen\Geometry>
+
 
 using namespace Eigen;
 
@@ -272,4 +275,24 @@ inline void MergeSort(std::vector<std::vector<double>> &vec)
 	}
 }
 
+inline Matrix3d SkewVector(const Vector3d &v)
+{
+	Matrix3d A;
+	A << 0, -v[2], v[1],
+		v[2], 0, -v[0],
+		-v[1], v[0], 0;
+	return A;
+}
+
+inline Vector3d BackTransform(const Vector3d &xyz, VectorXd &tVec)
+{
+	Vector3d t = { tVec[0], tVec[1], tVec[2] }, w = { tVec[4],tVec[5], tVec[6] };
+	double theta = w.norm();
+	w /= theta;
+	Matrix3d I = Matrix3d::Identity(), wHat = SkewVector(w), R;
+
+	R = I + wHat*sin(theta) + wHat*wHat*(1 - cos(theta));
+
+	return R.transpose()*(xyz - t);
+}
 #endif

@@ -304,7 +304,7 @@ void Sweep::FindCorrespondences(int sliceNumber, Sweep &OldSweep)
 
 void Sweep::FindNearestEdge(LoamPt &curEdgePt, Sweep &OldSweep)
 {
-
+	Vector3d Xi_ = curEdgePt.xyz;
 }
 
 void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)

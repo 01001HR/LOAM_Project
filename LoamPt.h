@@ -45,6 +45,7 @@ public:
 	bool Distance(double &dist, LoamPt &otherPt);
 	Vector3d Transform(Matrix4d &xformMatrix4x4);
 	void TransformSelf(Matrix4d &xformMatrix4x4); // xformMatrix is stored as stacked row-vectors
+	Vector3d BackTransform(VectorXd &tVec);
 };
 
 #endif // !1
