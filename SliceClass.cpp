@@ -205,7 +205,7 @@ public:
 	bool FindBestPlanePt(int sliceIdx, std::vector<std::vector<double>> &curveVec);
 	bool EvaluatePlane(int sliceIdx, std::vector<double> &potentialPt);
 	double Distance2(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int &EnPflag);
-	MatrixXd GetJacobian(Sweep &OldSweep);
+	MatrixXd GetJacobian(VectorXd DistanceVector, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform);
 };
 
 Sweep::Sweep()
@@ -398,23 +398,31 @@ double Sweep::Distance2(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int 
 	Vector3d xj = OldSweep.ptCloud[pt.nearPt1[0]][pt.nearPt1[1]].xyz;
 	Vector3d xl = OldSweep.ptCloud[pt.nearPt2[0]][pt.nearPt2[1]].xyz;
 	Vector3d T_trans, T_rot, omega, xi_hat;
-	//VectorXd EstTransform = OldSweep.transform;
 	Matrix3d eye3, omega_hat, R;
+	double Distance;
 
-	T_rot << EstTransform(3), EstTransform(4), EstTransform(5);
-	double theta = T_rot.norm(), Distance;
-
-	T_trans << EstTransform(0), EstTransform(1), EstTransform(2);
-	
-	omega << EstTransform(3)/theta, EstTransform(4)/theta, EstTransform(5)/theta;
-	eye3 << 1, 0, 0, 0, 1, 0, 0, 0, 1;
-	omega_hat << 0, -omega(2), omega(1),
-		         omega(2), 0, -omega(0),
-	         	-omega(1), omega(0), 0;
-	R = eye3 + omega_hat*sin(theta) + omega_hat*omega_hat*(1 - cos(theta));
-	R.transposeInPlace();
-	xi_hat = R*(xi - T_trans);
-
+	double Tmax = abs(EstTransform(1));
+	for (int Idx = 1; Idx < 6; Idx++) {
+		if (abs(EstTransform(Idx)) > Tmax) {
+			Tmax = abs(EstTransform(Idx));
+		}
+	}
+	if (Tmax < pow(10, -5)) {
+		xi_hat = xi;
+	}
+	else {
+		T_rot << EstTransform(3), EstTransform(4), EstTransform(5);
+		double theta = T_rot.norm();
+		T_trans << EstTransform(0), EstTransform(1), EstTransform(2);
+		omega << EstTransform(3) / theta, EstTransform(4) / theta, EstTransform(5) / theta;
+		eye3 << 1, 0, 0, 0, 1, 0, 0, 0, 1;
+		omega_hat << 0, -omega(2), omega(1),
+			omega(2), 0, -omega(0),
+			-omega(1), omega(0), 0;
+		R = eye3 + omega_hat*sin(theta) + omega_hat*omega_hat*(1 - cos(theta));
+		R.transposeInPlace();
+		xi_hat = R*(xi - T_trans);
+	}
 	if (EnPflag == 1) {
 		Distance = ((xi_hat - xj).cross(xi_hat - xl)).norm() / (xj - xl).norm();
 	}
@@ -429,27 +437,61 @@ double Sweep::Distance2(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int 
 	return Distance;
 }
 
-//MatrixXd Sweep::GetJacobian(Sweep &OldSweep) {
-//	MatrixXd JacobianFull, JacobianRow(1, 6);
-//	VectorXd EstTransform = OldSweep.transform, EstTransform_Delta;
-//	double Delta = pow(10, -6);
-//	int cnt = 0;
-//	int EnPflag = 1;
-//	for (int i = 0; i < OldSweep.edgePts.size(); i++) {
-//		for (auto &entry : edgePts[i]) {
-//			for (int col = 0; col < 6; col++) {
-//				EstTransform_Delta = EstTransform;
-//				EstTransform_Delta(col) = EstTransform(col) + Delta;
-//				JacobianRow(0, col) = (Distance2(OldSweep.ptCloud[i][entry], OldSweep, EstTransform_Delta, EnPflag) - 
-//					Distance2(OldSweep.ptCloud[i][entry], OldSweep, EstTransform, EnPflag)) / Delta;
-//			}
-//			JacobianFull << JacobianFull, JacobianRow;
-//		}
-//		
-//	}
-//
-//	return JacobianFull;
-//}
+MatrixXd Sweep::GetJacobian(VectorXd DistanceVectorEig, Sweep &OldSweep, Sweep &NewSweep,
+	VectorXd EstTransform) {
+
+	vector<vector<double>> Jacobian_Full;
+	vector<double> JacobianRow(6), DistanceVector;
+	VectorXd EstTransform_Delta;
+	double Delta = pow(10, -6), OldDistance;
+	int EnPflag = 1; //edge distance
+	for (int i = 0; i < NewSweep.edgePts.size(); i++) {
+		for (auto &entry : edgePts[i]) {
+			OldDistance = Distance2(NewSweep.ptCloud[i][entry], OldSweep, EstTransform, EnPflag);
+			for (int col = 0; col < 6; col++) {
+				EstTransform_Delta = EstTransform;
+				EstTransform_Delta(col) = EstTransform(col) + Delta;				
+				JacobianRow[col] = (Distance2(NewSweep.ptCloud[i][entry], OldSweep, EstTransform_Delta, EnPflag) -
+					 OldDistance) / Delta;
+			}
+			Jacobian_Full.push_back(JacobianRow);
+			DistanceVector.push_back(OldDistance);
+		}
+	}
+	EnPflag = 2; //plane distance
+	for (int i = 0; i < NewSweep.planePts.size(); i++) {
+		for (auto &entry : planePts[i]) {
+			Distance2(NewSweep.ptCloud[i][entry], OldSweep, EstTransform, EnPflag);
+			for (int col = 0; col < 6; col++) {
+				EstTransform_Delta = EstTransform;
+				EstTransform_Delta(col) = EstTransform(col) + Delta;
+				JacobianRow[col] = (Distance2(NewSweep.ptCloud[i][entry], OldSweep, EstTransform_Delta, EnPflag) -
+					OldDistance) / Delta;
+			}
+			Jacobian_Full.push_back(JacobianRow);
+			DistanceVector.push_back(OldDistance);
+		}
+	}
+	MatrixXd JacobianFullEigen(Jacobian_Full.size(), 6);
+	for (int m = 0; m < Jacobian_Full.size(); m++) {
+		for (int n = 0; n < 6; n++) {
+			JacobianFullEigen(m, n) = Jacobian_Full[m][n];
+		}
+		DistanceVectorEig(m) = DistanceVector[m];
+	}
+	return JacobianFullEigen;
+}
+
+VectorXd LMoptimization(Sweep &OldSweep, Sweep &NewSweep) {
+	double lambda = 1;
+	double lambda_scale = 10;
+	VectorXd TransformInitial;
+
+
+
+
+
+}
 
 int main(void)
 {
@@ -543,6 +585,8 @@ int main(void)
 	testSweep.AddSlice(testSlice);
 
 	testSweep.FindEdges(testSweep.numSlices);
+
+	getchar();
 
 	return 0;
 }
