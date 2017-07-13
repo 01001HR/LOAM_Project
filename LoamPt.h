@@ -1,4 +1,6 @@
-#pragma once
+#ifndef LOAM_PT_CLASS
+#define LOAM_PT_CLASS
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
@@ -10,7 +12,6 @@
 #include <fstream>
 #include <iterator>
 #include <map>
-#include "LinearAlgebraFns.h"
 
 using namespace Eigen;
 using namespace std;
@@ -45,3 +46,5 @@ public:
 	Vector3d Transform(Matrix4d &xformMatrix4x4);
 	void TransformSelf(Matrix4d &xformMatrix4x4); // xformMatrix is stored as stacked row-vectors
 };
+
+#endif // !1

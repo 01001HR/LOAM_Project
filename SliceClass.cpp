@@ -1,7 +1,5 @@
 #include "Sweep.h"
 
-// cameron is stupid
-
 int main(void)
 {
 	LoamPt myNewPt = LoamPt();

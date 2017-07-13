@@ -260,7 +260,7 @@ inline void MergeSort(std::vector<std::vector<double>> &vec)
 			start1 = i;
 			end1 = start1 + size;
 			start2 = end1;
-			end2 = fmin(start2 + size, len);
+			end2 = (int)fmin(start2 + size, len);
 			Merge(vec, start1, end1, start2, end2);
 			for (auto &elem : vec)
 			{
