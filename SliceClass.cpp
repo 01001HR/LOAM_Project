@@ -18,16 +18,17 @@ class LoamPt
 {
 public:
 	Vector3d xyz;
-	int sweepID;
-	int sliceID;
+	int sweepID = 0;
+	int sliceID = 0;
 	std::vector<int> nearPt1, nearPt2, nearPt3; // these will be len 2 vectors with pt = {sliceIndex, pointIndex}
-	int filled;
-	double timeStamp;
+	int filled = 0;
+	double timeStamp = 0.0;
 
 	LoamPt();
 	~LoamPt();
 	LoamPt(const std::vector<double> &xyzInput); // no time given
-	LoamPt(const std::vector<double> &xyzInput, const double time);
+	LoamPt(const std::vector<double> &xyzInput, double time);
+	LoamPt(const std::vector<double> &xyzInput, int sweepInput, int sliceInput, double time);
 	LoamPt(const double x, const double y, const double z, const double time);
 	LoamPt(const LoamPt &otherPt);
 	LoamPt &operator = (const LoamPt &otherPt);
@@ -58,6 +59,8 @@ LoamPt::LoamPt(const LoamPt &otherPt) // copy constructor
 	if (otherPt.filled == 1)
 	{
 		xyz = otherPt.xyz;
+		sweepID = otherPt.sweepID;
+		sliceID = otherPt.sliceID;
 		timeStamp = otherPt.timeStamp;
 		filled = 1;
 	}
@@ -89,6 +92,18 @@ LoamPt::LoamPt(const std::vector<double> &xyzInput)
 		timeStamp = NULL;
 		filled = 1;
 		std::cout << "Warning, the incoming datapoints have no timestamps" << std::endl;
+	}
+}
+
+LoamPt::LoamPt(const std::vector<double> &xyzInput, int sweepInput, int sliceInput, double time) // vector input constructor
+{
+	std::cout << "In here" << std::endl;
+	if (SetXYZ(xyzInput) == true)
+	{
+		timeStamp = time;
+		sweepID = sweepInput;
+		sliceID = sliceInput;
+		filled = 1;
 	}
 }
 
@@ -195,7 +210,7 @@ public:
 	Sweep();
 	~Sweep();
 	Sweep(std::vector<std::vector<double>> &inputSlice);
-	void AddSlice(int sweepNumber, int sliceNumber, std::vector<std::vector<double>> &inputSlice);
+	void AddSlice(int sweepNumber, int sliceNumber, double timeStamp, std::vector<std::vector<double>> &inputSlice);
 	void AddSlice(std::vector<std::vector<double>> &inputSlice);
 	void FindAllEdges();
 	void FindEdges(int sliceIndex);
@@ -206,6 +221,9 @@ public:
 	bool EvaluatePlane(int sliceIdx, std::vector<double> &potentialPt);
 	double Distance2(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int &EnPflag);
 	MatrixXd GetJacobian(VectorXd DistanceVector, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform);
+	void FindCorrespondences(int sliceNumber, Sweep &OldSweep);
+	void FindNearestEdge(LoamPt &curEdgePt, Sweep &OldSweep);
+	void FindNearestPlane(LoamPt &curPlanePt, Sweep &OldSweep);
 };
 
 Sweep::Sweep()
@@ -221,18 +239,19 @@ Sweep::~Sweep()
 Sweep::Sweep(std::vector<std::vector<double>> &inputSlice)
 {
 	sweepID = NULL;
-	AddSlice(sweepID, numSlices+1, inputSlice);
+	AddSlice(sweepID, numSlices+1, (double)NULL, inputSlice);
 }
 
-void Sweep::AddSlice(int sweepNumber, int sliceNumber, std::vector<std::vector<double>> &inputSlice)
+void Sweep::AddSlice(int sweepNumber, int sliceNumber, double timeStamp, std::vector<std::vector<double>> &inputSlice)
 {
 	std::vector<LoamPt> slice;
+	LoamPt tempPt;
+	numSlices++;
 	for (auto &xyzPt : inputSlice)
 	{
-		slice.push_back(LoamPt(xyzPt));
+		slice.push_back(LoamPt(xyzPt, sweepNumber, sliceNumber, timeStamp));
 	}
 	ptCloud.push_back(slice);
-	numSlices++;
 }
 
 void Sweep::AddSlice(std::vector<std::vector<double>> &inputSlice)
@@ -488,8 +507,34 @@ VectorXd LMoptimization(Sweep &OldSweep, Sweep &NewSweep) {
 	VectorXd TransformInitial;
 
 
+	return TransformInitial;
 
 
+}
+
+void Sweep::FindCorrespondences(int sliceNumber, Sweep &OldSweep)
+{
+	// Find all edge-point correspondences
+	for (auto &elem : edgePts[sliceNumber])
+	{
+		FindNearestEdge(ptCloud[sliceNumber][elem], OldSweep);
+	}
+
+	// Find all plane-point correspondences
+	for (auto &elem : planePts[sliceNumber])
+	{
+		FindNearestPlane(ptCloud[sliceNumber][elem], OldSweep);
+	}
+}
+
+
+void Sweep::FindNearestEdge(LoamPt &curEdgePt, Sweep &OldSweep)
+{
+
+}
+
+void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
+{
 
 }
 
@@ -516,7 +561,7 @@ int main(void)
 
 	for (int i = 0; i < 5; i++)
 	{
-		NewSweep.AddSlice(0, i, newSlicePoints);
+		NewSweep.AddSlice(1, 0, i, newSlicePoints);
 	}
 
 	Vector3d xyz2 = NewSweep.ptCloud[0][6].xyz;
@@ -573,7 +618,9 @@ int main(void)
 		}
 	}
 
-	Sweep testSweep(testSlice);
+	Sweep testSweep;
+
+	testSweep.AddSlice(1, 0, 0.0, testSlice);
 
 	for (auto &elem : testSlice)
 	{
@@ -582,7 +629,7 @@ int main(void)
 
 	testSweep.FindEdges(testSweep.numSlices);
 
-	testSweep.AddSlice(testSlice);
+	testSweep.AddSlice(1, 1, 0.0, testSlice);
 
 	testSweep.FindEdges(testSweep.numSlices);
 
