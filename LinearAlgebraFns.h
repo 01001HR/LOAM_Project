@@ -10,14 +10,17 @@
 #ifdef WIN32
 #include <Eigen\Core>
 #include <Eigen\Dense>
+#include <Eigen\Geometry>
 #else
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include <Eigen/Geometry>
 #endif
 
 #include <random>
 #include <fstream>
 #include <iterator>
+
 
 using namespace Eigen;
 
@@ -269,7 +272,7 @@ inline void MergeSort(std::vector<std::vector<double>> &vec)
 			start1 = i;
 			end1 = start1 + size;
 			start2 = end1;
-			end2 = fmin(start2 + size, len);
+			end2 = (int)fmin(start2 + size, len);
 			Merge(vec, start1, end1, start2, end2);
 			for (auto &elem : vec)
 			{
@@ -281,4 +284,24 @@ inline void MergeSort(std::vector<std::vector<double>> &vec)
 	}
 }
 
+inline Matrix3d SkewVector(const Vector3d &v)
+{
+	Matrix3d A;
+	A << 0, -v[2], v[1],
+		v[2], 0, -v[0],
+		-v[1], v[0], 0;
+	return A;
+}
+
+inline Vector3d BackTransform(const Vector3d &xyz, VectorXd &tVec)
+{
+	Vector3d t = { tVec[0], tVec[1], tVec[2] }, w = { tVec[4],tVec[5], tVec[6] };
+	double theta = w.norm();
+	w /= theta;
+	Matrix3d I = Matrix3d::Identity(), wHat = SkewVector(w), R;
+
+	R = I + wHat*sin(theta) + wHat*wHat*(1 - cos(theta));
+
+	return R.transpose()*(xyz - t);
+}
 #endif
