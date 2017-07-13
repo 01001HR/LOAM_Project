@@ -4,13 +4,21 @@
 #include <vector>
 #include <iostream>
 #include <math.h>
+
+#ifdef WIN32
 #include <Eigen\Core>
 #include <Eigen\Dense>
+#else
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#endif
+
 #include <random>
 #include <fstream>
 #include <iterator>
 #include <map>
 #include "LinearAlgebraFns.h"
+
 
 using namespace Eigen;
 using namespace std;

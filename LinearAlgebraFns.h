@@ -6,7 +6,15 @@
 #include <vector>
 #include <iostream>
 #include <math.h>
+
+#ifdef WIN32
 #include <Eigen\Core>
+#include <Eigen\Dense>
+#else
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#endif
+
 #include <random>
 #include <fstream>
 #include <iterator>
@@ -30,6 +38,7 @@ inline numType Mult(const std::vector<numType> &v1, const std::vector<numType> &
 	{
 		std::cout << "Input vector sizes do not match" << std::endl;
 	}
+    return product;
 }
 
 template <class numType>

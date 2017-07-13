@@ -116,21 +116,25 @@ bool LoamPt::SetXYZ(const std::vector<double> &newXYZ)
 inline const double LoamPt::GetX()
 {
 	if (filled == 1) return xyz[0];
+    else return 0.0;
 }
 
 inline const double LoamPt::GetY()
 {
 	if (filled == 1) return xyz[1];
+    else return 0.0;
 }
 
 inline const double LoamPt::GetZ()
 {
 	if (filled == 1) return xyz[2];
+    else return 0.0;
 }
 
 inline const double LoamPt::GetTime()
 {
 	if (filled == 1) return timeStamp;
+    else return 0.0;
 }
 
 Vector3d LoamPt::Transform(Matrix4d &xformMatrix4x4)
