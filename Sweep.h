@@ -12,7 +12,7 @@ public:
 	std::vector<double> timeStamps;						// Vector of time values, where timeStamps[i] is the timeStamp corresponding to slice i of the ptCloud
 	double tStart, tEnd, tCur;
 	VectorXd transform;
-	int sweepID, numSlices = -1, kernalSize = 11, regionPerSlice = 4, edgePerRegion = 2, planePerRegion = 4, edgeFindThreshold = 3;
+	int sweepID, numSlices = -1, kernalSize = 11, regionPerSlice = 4, edgePerRegion = 2, planePerRegion = 4, edgeFindThreshold = 3, maxNumSweeps = 720;
 	Sweep();
 	~Sweep();
 	Sweep(std::vector<std::vector<double>> &inputSlice);
@@ -28,7 +28,7 @@ public:
 	double Distance2(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int &EnPflag);
 	MatrixXd GetJacobian(VectorXd DistanceVector, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform);
 	void FindCorrespondences(int sliceNumber, Sweep &OldSweep);
-	void FindNearestEdge(LoamPt &curEdgePt, Sweep &OldSweep);
+	void FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep);
 	void FindNearestPlane(LoamPt &curPlanePt, Sweep &OldSweep);
 };
 

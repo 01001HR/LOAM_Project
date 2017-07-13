@@ -31,6 +31,7 @@ public:
 	int sweepID = 0;
 	int sliceID = 0;
 	std::vector<int> nearPt1, nearPt2, nearPt3; // these will be len 2 vectors with pt = {sliceIndex, pointIndex}
+	double dist;
 	int filled = 0;
 	double timeStamp = 0.0;
 

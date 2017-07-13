@@ -291,7 +291,7 @@ void Sweep::FindCorrespondences(int sliceNumber, Sweep &OldSweep)
 	// Find all edge-point correspondences
 	for (auto &elem : edgePts[sliceNumber])
 	{
-		FindNearestEdge(ptCloud[sliceNumber][elem], OldSweep);
+		FindNearestLine(ptCloud[sliceNumber][elem], OldSweep);
 	}
 
 	// Find all plane-point correspondences
@@ -301,13 +301,51 @@ void Sweep::FindCorrespondences(int sliceNumber, Sweep &OldSweep)
 	}
 }
 
-
-void Sweep::FindNearestEdge(LoamPt &curEdgePt, Sweep &OldSweep)
+void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 {
-	Vector3d Xi_ = curEdgePt.xyz;
+	// Back-transform the point to the beginning of the current sweep.
+	Vector3d Xi_ = BackTransform(curEdgePt.xyz, transform, (timeStamps[curEdgePt.sliceID] - tStart)/(tCur - tStart));
+
+	std::vector<int> bestPt = { 0,0 };
+	double bestDist = 10e10, tempDist;
+	std::vector<double> distances;
+
+	// Find the nearest edgepoint located in the +/- n-neighboring slices of the previous sweep
+	for (int i = curEdgePt.sliceID - 2 ; curEdgePt.sliceID + i < 3; i++)
+	{
+		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSweeps])
+		{
+			tempDist = (OldSweep.ptCloud[i%maxNumSweeps][oldIdx].xyz - Xi_).norm();
+			if ((tempDist < bestDist))
+			{
+				bestDist = tempDist;
+				bestPt = { i%maxNumSweeps, oldIdx };
+			}
+		}
+	}
+	curEdgePt.nearPt1 = bestPt;
+	bestDist = 10e10;
+
+	// Find edgepoint closest to nearPt1 located in either adjacent slice of the previous sweep
+	for (int i = curEdgePt.nearPt1[0] - 1; i < curEdgePt.nearPt1[0] + 2; i += 2)
+	{
+		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSweeps])
+		{
+			tempDist = (OldSweep.ptCloud[i%maxNumSweeps][oldIdx].xyz - OldSweep.ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz).norm();
+			if (tempDist < bestDist)
+			{
+				bestDist = tempDist;
+				bestPt = { i%maxNumSweeps, oldIdx };
+			}
+		}
+	}
+	curEdgePt.nearPt2 = bestPt;
+	int x;
+	curEdgePt.dist = Distance2(curEdgePt, OldSweep, transform, x); // this needs to be changed
 }
 
 void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 {
-
+	// Back-transform the point to the beginning of the current sweep.
+	Vector3d Xi_ = BackTransform(curEdgePt.xyz, transform, (timeStamps[curEdgePt.sliceID] - tStart) / (tCur - tStart));
 }

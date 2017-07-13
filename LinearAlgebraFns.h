@@ -293,15 +293,21 @@ inline Matrix3d SkewVector(const Vector3d &v)
 	return A;
 }
 
-inline Vector3d BackTransform(const Vector3d &xyz, VectorXd &tVec)
+inline Vector3d BackTransform(const Vector3d &xyz, VectorXd &tVec, double timeRatio)
 {
+	// Separate the translation and angle-axis vectors from transformation vector
 	Vector3d t = { tVec[0], tVec[1], tVec[2] }, w = { tVec[4],tVec[5], tVec[6] };
+	// Separate the angle and axis of rotation matrix
 	double theta = w.norm();
 	w /= theta;
+	// Scale the translation and angle by the time-ratio
+	theta *= timeRatio;
+	t *= timeRatio;
+	// Calculate the rotation matrix
 	Matrix3d I = Matrix3d::Identity(), wHat = SkewVector(w), R;
-
 	R = I + wHat*sin(theta) + wHat*wHat*(1 - cos(theta));
 
+	// Return the back-transformed point
 	return R.transpose()*(xyz - t);
 }
 #endif
