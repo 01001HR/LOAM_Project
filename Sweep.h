@@ -26,6 +26,8 @@ public:
 	bool FindBestPlanePt(int sliceIdx, std::vector<std::vector<double>> &curveVec);
 	bool EvaluatePlane(int sliceIdx, std::vector<double> &potentialPt);
 	double Distance2(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int &EnPflag);
+	double Dist2Line(Vector3d &x_, Vector3d &x1, Vector3d &x2);
+	double Dist2Plane(Vector3d &x_, Vector3d &x1, Vector3d &x2, Vector3d &x3);
 	MatrixXd GetJacobian(VectorXd DistanceVector, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform);
 	void FindCorrespondences(int sliceNumber, Sweep &OldSweep);
 	void FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep);

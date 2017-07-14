@@ -296,7 +296,7 @@ inline Matrix3d SkewVector(const Vector3d &v)
 inline Vector3d BackTransform(const Vector3d &xyz, VectorXd &tVec, double timeRatio)
 {
 	// Separate the translation and angle-axis vectors from transformation vector
-	Vector3d t = { tVec[0], tVec[1], tVec[2] }, w = { tVec[4],tVec[5], tVec[6] };
+	Vector3d t = { tVec[0], tVec[1], tVec[2] }, w = { tVec[3],tVec[4], tVec[5] };
 	// Separate the angle and axis of rotation matrix
 	double theta = w.norm();
 	w /= theta;
@@ -310,4 +310,42 @@ inline Vector3d BackTransform(const Vector3d &xyz, VectorXd &tVec, double timeRa
 	// Return the back-transformed point
 	return R.transpose()*(xyz - t);
 }
+
+inline Vector3d ForwardTransform(const Vector3d &xyz, VectorXd &tVec, double timeRatio)
+{
+	// Separate the translation and angle-axis vectors from transformation vector
+	Vector3d t = { tVec[0], tVec[1], tVec[2] }, w = { tVec[3],tVec[4], tVec[5] };
+	// Separate the angle and axis of rotation matrix
+	double theta = w.norm();
+	w /= theta;
+	// Scale the translation and angle by the time-ratio
+	theta *= timeRatio;
+	t *= timeRatio;
+	// Calculate the rotation matrix
+	Matrix3d I = Matrix3d::Identity(), wHat = SkewVector(w), R;
+	R = I + wHat*sin(theta) + wHat*wHat*(1 - cos(theta));
+
+	// Return the back-transformed point
+	return R*xyz + t;
+}
+
+template <class numType, class castType>
+std::vector<std::vector<castType>> ParseBinary(numType inTypeEx, castType outTypeEx, char fileName[256])
+{
+	std::vector<std::vector<castType>> outputPtList;
+	numType v[4];
+	FILE *file;
+
+	fopen_s(&file, fileName, "rb");
+
+	while (fread(v, sizeof(v[0]), sizeof(v) / sizeof(v[0]), file))
+	{
+		outputPtList.push_back(std::vector<castType>({ (castType)v[0],(castType)v[1],(castType)v[2]}));
+	}
+
+	fclose(file);
+
+	return outputPtList;
+}
+
 #endif
