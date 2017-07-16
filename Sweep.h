@@ -13,7 +13,7 @@ public:
 	std::vector<double> timeStamps;						// Vector of time values, where timeStamps[i] is the timeStamp corresponding to slice i of the ptCloud
 	double tStart, tEnd, tCur;
 	VectorXd transform;
-	int sweepID, numSlices = -1, kernalSize = 11, regionPerSlice = 4, edgePerRegion = 2, planePerRegion = 4, edgeFindThreshold = 3, maxNumSweeps = 720;
+	int sweepID, numSlices = -1, kernalSize = 11, regionPerSlice = 4, edgePerRegion = 2, planePerRegion = 4, edgeFindThreshold = 3, maxNumSlices = 720;
 	Sweep();
 	~Sweep();
 	Sweep(std::vector<std::vector<double>> &inputSlice);
@@ -26,7 +26,8 @@ public:
 	bool EvaluateEdge(int sliceIdx, std::vector<double> &potentialPt);
 	bool FindBestPlanePt(int sliceIdx, std::vector<std::vector<double>> &curveVec);
 	bool EvaluatePlane(int sliceIdx, std::vector<double> &potentialPt);
-	
+	double Dist2Line(Vector3d &x_, Vector3d &x1, Vector3d &x2);
+	double Dist2Plane(Vector3d &x_, Vector3d &x1, Vector3d &x2, Vector3d &x3);
 	void FindCorrespondences(int sliceNumber, Sweep &OldSweep);
 	void FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep);
 	void FindNearestPlane(LoamPt &curPlanePt, Sweep &OldSweep);
