@@ -340,13 +340,13 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 	// Find the nearest edgepoint located in the +/- n-neighboring slices of the previous sweep
 	for (int i = curEdgePt.sliceID - 2 ; curEdgePt.sliceID + i < 3; i++)
 	{
-		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSweeps])
+		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSlices])
 		{
-			tempDist = (OldSweep.ptCloud[i%maxNumSweeps][oldIdx].xyz - x_).norm();
+			tempDist = (OldSweep.ptCloud[i%maxNumSlices][oldIdx].xyz - x_).norm();
 			if (tempDist < bestDist)
 			{
 				bestDist = tempDist;
-				bestPt = { i%maxNumSweeps, oldIdx };
+				bestPt = { i%maxNumSlices, oldIdx };
 			}
 		}
 	}
@@ -356,13 +356,13 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 	// Find edgepoint2 closest to nearPt1 located in either adjacent slice of the previous sweep
 	for (int i = curEdgePt.nearPt1[0] - 1; i < curEdgePt.nearPt1[0] + 2; i += 2)
 	{
-		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSweeps])
+		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSlices])
 		{
-			tempDist = (OldSweep.ptCloud[i%maxNumSweeps][oldIdx].xyz - OldSweep.ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz).norm();
+			tempDist = (OldSweep.ptCloud[i%maxNumSlices][oldIdx].xyz - OldSweep.ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz).norm();
 			if (tempDist < bestDist)
 			{
 				bestDist = tempDist;
-				bestPt = { i%maxNumSweeps, oldIdx };
+				bestPt = { i%maxNumSlices, oldIdx };
 			}
 		}
 	}
@@ -383,13 +383,13 @@ void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 	// Find the nearest planePoint located in the +/- n-neighboring slices of the previous sweep
 	for (int i = curEdgePt.sliceID - 2; curEdgePt.sliceID + i < 3; i++)
 	{
-		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSweeps])
+		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSlices])
 		{
-			tempDist = (OldSweep.ptCloud[i%maxNumSweeps][oldIdx].xyz - x_).norm();
+			tempDist = (OldSweep.ptCloud[i%maxNumSlices][oldIdx].xyz - x_).norm();
 			if (tempDist < bestDist)
 			{
 				bestDist = tempDist;
-				bestPt = { i%maxNumSweeps, oldIdx };
+				bestPt = { i%maxNumSlices, oldIdx };
 			}
 		}
 	}
@@ -415,13 +415,13 @@ void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 	// Find the closest to planePoint to nearPt1 located in either adjacent slice of the previous sweep
 	for (int i = curEdgePt.nearPt1[0] - 1; i < curEdgePt.nearPt1[0] + 2; i += 2)
 	{
-		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSweeps])
+		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSlices])
 		{
-			tempDist = (OldSweep.ptCloud[i%maxNumSweeps][oldIdx].xyz - OldSweep.ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz).norm();
+			tempDist = (OldSweep.ptCloud[i%maxNumSlices][oldIdx].xyz - OldSweep.ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz).norm();
 			if (tempDist < bestDist)
 			{
 				bestDist = tempDist;
-				bestPt = { i%maxNumSweeps, oldIdx };
+				bestPt = { i%maxNumSlices, oldIdx };
 			}
 		}
 	}

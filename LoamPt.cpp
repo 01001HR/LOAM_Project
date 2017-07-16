@@ -1,6 +1,4 @@
-#ifndef LOAM_PT_CLASS
 #include "LoamPt.h"
-#endif // !LOAM_PT_CLASS
 
 LoamPt::LoamPt()
 {
