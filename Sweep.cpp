@@ -1,4 +1,5 @@
 #include "Sweep.h"
+#include "LMOptim.h"
 
 Sweep::Sweep()
 {
@@ -185,106 +186,6 @@ bool Sweep::EvaluatePlane(int sliceIdx, std::vector<double> &potentialPt) // Che
 	}
 }
 
-double Sweep::Distance2(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int &EnPflag) {
-	// EnPflag = 1: Edge | EnPflag = 2: Plane
-	Vector3d xi = pt.xyz;
-	Vector3d xj = OldSweep.ptCloud[pt.nearPt1[0]][pt.nearPt1[1]].xyz;
-	Vector3d xl = OldSweep.ptCloud[pt.nearPt2[0]][pt.nearPt2[1]].xyz;
-	Vector3d T_trans, T_rot, omega, xi_hat;
-	Matrix3d eye3, omega_hat, R;
-	double Distance;
-
-	double Tmax = abs(EstTransform(1));
-	for (int Idx = 1; Idx < 6; Idx++) {
-		if (abs(EstTransform(Idx)) > Tmax) {
-			Tmax = abs(EstTransform(Idx));
-		}
-	}
-	if (Tmax < pow(10, -5)) {
-		xi_hat = xi;
-	}
-	else {
-		T_rot << EstTransform(3), EstTransform(4), EstTransform(5);
-		double theta = T_rot.norm();
-		T_trans << EstTransform(0), EstTransform(1), EstTransform(2);
-		omega << EstTransform(3) / theta, EstTransform(4) / theta, EstTransform(5) / theta;
-		eye3 << 1, 0, 0, 0, 1, 0, 0, 0, 1;
-		omega_hat << 0, -omega(2), omega(1),
-			omega(2), 0, -omega(0),
-			-omega(1), omega(0), 0;
-		R = eye3 + omega_hat*sin(theta) + omega_hat*omega_hat*(1 - cos(theta));
-		R.transposeInPlace();
-		xi_hat = R*(xi - T_trans);
-	}
-	if (EnPflag == 1) {
-		Distance = ((xi_hat - xj).cross(xi_hat - xl)).norm() / (xj - xl).norm();
-	}
-	else if (EnPflag == 2) {
-		Vector3d xm = OldSweep.ptCloud[pt.nearPt3[0]][pt.nearPt3[1]].xyz;
-		Distance = abs((xi_hat - xj).dot((xj - xl).cross(xj - xm))) / ((xj - xl).cross(xj - xm)).norm();
-	}
-	else {
-		cout << "Edge or Plane indicator not provided!" << endl;
-	}
-
-	return Distance;
-}
-
-MatrixXd Sweep::GetJacobian(VectorXd DistanceVectorEig, Sweep &OldSweep, Sweep &NewSweep,
-	VectorXd EstTransform) {
-
-	vector<vector<double>> Jacobian_Full;
-	vector<double> JacobianRow(6), DistanceVector;
-	VectorXd EstTransform_Delta;
-	double Delta = pow(10, -6), OldDistance;
-	int EnPflag = 1; //edge distance
-	for (int i = 0; i < NewSweep.edgePts.size(); i++) {
-		for (auto &entry : edgePts[i]) {
-			OldDistance = Distance2(NewSweep.ptCloud[i][entry], OldSweep, EstTransform, EnPflag);
-			for (int col = 0; col < 6; col++) {
-				EstTransform_Delta = EstTransform;
-				EstTransform_Delta(col) = EstTransform(col) + Delta;
-				JacobianRow[col] = (Distance2(NewSweep.ptCloud[i][entry], OldSweep, EstTransform_Delta, EnPflag) -
-					OldDistance) / Delta;
-			}
-			Jacobian_Full.push_back(JacobianRow);
-			DistanceVector.push_back(OldDistance);
-		}
-	}
-	EnPflag = 2; //plane distance
-	for (int i = 0; i < NewSweep.planePts.size(); i++) {
-		for (auto &entry : planePts[i]) {
-			Distance2(NewSweep.ptCloud[i][entry], OldSweep, EstTransform, EnPflag);
-			for (int col = 0; col < 6; col++) {
-				EstTransform_Delta = EstTransform;
-				EstTransform_Delta(col) = EstTransform(col) + Delta;
-				JacobianRow[col] = (Distance2(NewSweep.ptCloud[i][entry], OldSweep, EstTransform_Delta, EnPflag) -
-					OldDistance) / Delta;
-			}
-			Jacobian_Full.push_back(JacobianRow);
-			DistanceVector.push_back(OldDistance);
-		}
-	}
-	MatrixXd JacobianFullEigen(Jacobian_Full.size(), 6);
-	for (int m = 0; m < Jacobian_Full.size(); m++) {
-		for (int n = 0; n < 6; n++) {
-			JacobianFullEigen(m, n) = Jacobian_Full[m][n];
-		}
-		DistanceVectorEig(m) = DistanceVector[m];
-	}
-	return JacobianFullEigen;
-}
-
-VectorXd LMoptimization(Sweep &OldSweep, Sweep &NewSweep) {
-	double lambda = 1;
-	double lambda_scale = 10;
-	VectorXd TransformInitial;
-
-
-	return TransformInitial;
-
-
-}
 
 void Sweep::FindCorrespondences(int sliceNumber, Sweep &OldSweep)
 {
@@ -313,7 +214,7 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 	// Find the nearest edgepoint located in the +/- n-neighboring slices of the previous sweep
 	for (int i = curEdgePt.sliceID - 2 ; curEdgePt.sliceID + i < 3; i++)
 	{
-		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSweeps])
+		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSweeps])//needs changing
 		{
 			tempDist = (OldSweep.ptCloud[i%maxNumSweeps][oldIdx].xyz - Xi_).norm();
 			if ((tempDist < bestDist))
@@ -340,8 +241,7 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 		}
 	}
 	curEdgePt.nearPt2 = bestPt;
-	int x;
-	curEdgePt.dist = Distance2(curEdgePt, OldSweep, transform, x); // this needs to be changed
+	//curEdgePt.dist = Dist2L
 }
 
 void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
