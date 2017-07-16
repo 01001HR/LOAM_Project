@@ -87,7 +87,7 @@ void Sweep::SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curve
 	}
 
 	// sort the curvature vector
-	MergeSort(curvatures);
+	MergeSort(curvatures, 0);
 
 	int edges = 0, planes = 0;
 
