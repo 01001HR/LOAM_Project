@@ -87,7 +87,7 @@ void Sweep::SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curve
 	}
 
 	// sort the curvature vector
-	MergeSort(curvatures, 0);
+	MergeSort(curvatures);
 
 	int edges = 0, planes = 0;
 
@@ -125,6 +125,7 @@ bool Sweep::FindBestEdgePt(int sliceIdx, std::vector<std::vector<double>> &curve
 	{
 		// save edgePt's {sliceIdx, ptIdx}
 		edgePts[sliceIdx].push_back((int)pt[1]);
+		numEdges++;
 		return true;
 	}
 	return false;
@@ -140,6 +141,7 @@ bool Sweep::FindBestPlanePt(int sliceIdx, std::vector<std::vector<double>> &curv
 	{
 		// save planePt's {sliceIdx, ptIdx}
 		planePts[sliceIdx].push_back((int)pt[1]);
+		numPlanes++;
 		return true;
 	}
 	return false;
