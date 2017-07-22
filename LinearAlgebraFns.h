@@ -340,15 +340,36 @@ inline Vector3d ForwardTransform(const Vector3d &xyz, VectorXd &tVec, double tim
 {
 	// Separate the translation and angle-axis vectors from transformation vector
 	Vector3d t = { tVec[0], tVec[1], tVec[2] }, w = { tVec[3],tVec[4], tVec[5] };
+	//std::cout << tVec << std::endl;
+	//std::cout << w.size() << std::endl;
 	// Separate the angle and axis of rotation matrix
 	double theta = w.norm();
-	w /= theta;
-	// Scale the translation and angle by the time-ratio
-	theta *= timeRatio;
+	Matrix3d I = Matrix3d::Identity(), wHat, R;
+	if (theta > 10e-5)
+	{
+		//std::cout << w << std::endl;
+		w /= theta;
+		//std::cout << w << std::endl;
+
+		// Scale the translation and angle by the time-ratio
+		theta *= timeRatio;
+		// Calculate the rotation matrix
+
+		wHat = SkewVector(w);
+		R = I + wHat*sin(theta) + wHat*wHat*(1 - cos(theta));
+	}
+	else
+	{
+		R = I;
+	}
+
 	t *= timeRatio;
-	// Calculate the rotation matrix
-	Matrix3d I = Matrix3d::Identity(), wHat = SkewVector(w), R;
-	R = I + wHat*sin(theta) + wHat*wHat*(1 - cos(theta));
+
+	if (timeRatio > .95)
+	{
+		std::cout << "Time ratio = " << timeRatio << std::endl;
+		std::cout << t << w << std::endl;
+	}
 
 	// Return the back-transformed point
 	return R*xyz + t;
