@@ -330,3 +330,14 @@ void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 	curEdgePt.nearPt2 = bestPt;
 	curEdgePt.dist = Dist2Plane(x_, ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz, ptCloud[curEdgePt.nearPt2[0]][curEdgePt.nearPt2[1]].xyz, ptCloud[curEdgePt.nearPt3[0]][curEdgePt.nearPt3[1]].xyz); // this needs to be changed
 }
+
+void Sweep::TransformAll(VectorXd transform)
+{
+	for (auto &slice : ptCloud)
+	{
+		for (auto &pt : slice)
+		{
+			pt.xyz = ForwardTransform(pt.xyz, transform, (pt.GetTime() - tStart)/(tCur-tStart));
+		}
+	}
+}

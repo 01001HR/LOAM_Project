@@ -31,6 +31,7 @@ public:
 	void FindCorrespondences(int sliceNumber, Sweep &OldSweep);
 	void FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep);
 	void FindNearestPlane(LoamPt &curPlanePt, Sweep &OldSweep);
+	void TransformAll(VectorXd transform);
 };
 
 #endif // !SWEEP_CLASS
