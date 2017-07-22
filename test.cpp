@@ -1,5 +1,5 @@
 #include "Sweep.h"
-
+#include "LMOptim.h"
 //#include <xmmintrin.h>
 //#include <pmmintrin.h>
 //#define _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
@@ -55,15 +55,17 @@ int main(void)
 	std::cout << "OldSweepFilled" << std::endl;
 
 	newTestSweep.tStart = i;
+	i = 0;
 	for (auto &slice : orderedPoints)
 	{
-		newTestSweep.AddSlice(0, i, i, slice);
-		newTestSweep.timeStamps.push_back(i);
-		newTestSweep.tCur = i;
+		newTestSweep.AddSlice(1, i, 719 + i, slice);
+		//newTestSweep.AddSlice(0, i, i, slice);
+		newTestSweep.timeStamps.push_back(719+i);
+		newTestSweep.tCur = 719+i;
 		i++;
 	}
-	newTestSweep.tEnd = i;
-	newTestSweep.tCur = i;
+	newTestSweep.tEnd = 719+i;
+	newTestSweep.tCur = 719+i;
 
 	std::cout << "NewSweepFilled" << std::endl;
 
@@ -174,6 +176,10 @@ int main(void)
 	testSweep.FindEdges(testSweep.numSlices);
 
 	Matrix3d I = Matrix3d::Identity();
+
+	LMOptim optimizer;
+
+	VectorXd estT = optimizer.TransformEstimate(oldTestSweep, newTestSweep);
 
 
 	return 0;

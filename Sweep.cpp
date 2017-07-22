@@ -152,14 +152,21 @@ bool Sweep::EvaluateEdge(int sliceIdx, std::vector<double> &potentialPt) // Chec
 	double ptDist = ptCloud[sliceIdx][potentialPt[1]].xyz[0]; // treating ptDist[0] = X, the depth-distance w.r.t. sensor
 	for (int i = -(kernalSize / 2); i < 0; i++)
 	{
-		if ((ptCloud[sliceIdx][potentialPt[1] + i + 1].xyz[0] - ptCloud[sliceIdx][potentialPt[1] + i].xyz[0]) > edgeFindThreshold) // large increase in distance as we approach the potential point == occlusion
+		if (potentialPt[1] + i < 0) {
+			continue;
+		}
+		else if ((ptCloud[sliceIdx][potentialPt[1] + i + 1].xyz[0] - ptCloud[sliceIdx][potentialPt[1] + i].xyz[0]) > edgeFindThreshold) // large increase in distance as we approach the potential point == occlusion
 		{
 			return false;
 		}
 	}
 	for (int i = 1; i < (kernalSize / 2) + 1; i++)
 	{
-		if ((ptCloud[sliceIdx][potentialPt[1] + i + 1].xyz[0] - ptCloud[sliceIdx][potentialPt[1] + i].xyz[0]) < -edgeFindThreshold) // large decrease in distance as we move away from the potential point == occlusion
+		if (potentialPt[1] + i + 1 >= ptCloud[sliceIdx].size())
+		{
+			break;
+		}
+		else if ((ptCloud[sliceIdx][potentialPt[1] + i + 1].xyz[0] - ptCloud[sliceIdx][potentialPt[1] + i].xyz[0]) < -edgeFindThreshold) // large decrease in distance as we move away from the potential point == occlusion
 		{
 			return false;
 		}
