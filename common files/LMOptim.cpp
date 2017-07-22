@@ -51,13 +51,11 @@ Tmax = abs(EstTransform(Idx));
 	return Distance;
 }
 
-MatrixXd LMOptim::GetJacobian(VectorXd DistanceVec,MatrixXd &W, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform) {
+MatrixXd LMOptim::GetJacobian(VectorXd DistanceVec, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform) {
 	MatrixXd Jacobian = MatrixXd::Zero(NewSweep.numEdges + NewSweep.numPlanes, 6);
 	VectorXd InterpTransform_Delta, InterpTransform;
 	DistanceVec = VectorXd::Zero(NewSweep.numEdges + NewSweep.numPlanes);
-	W = MatrixXd::Zero(NewSweep.numEdges + NewSweep.numPlanes,  NewSweep.numEdges + NewSweep.numPlanes);
 	double Delta = pow(10, -6); //numerical Jacobian step-size
-	double BiSq_threshold = 10; //weighting func: w(x) = (1-(x/BiSq_threshold)^2)^2
 	double OldDistance;
 	int cnt = 0;
 	int SliceID;
@@ -74,13 +72,10 @@ MatrixXd LMOptim::GetJacobian(VectorXd DistanceVec,MatrixXd &W, Sweep &OldSweep,
 					OldDistance) / Delta;
 			}
 			DistanceVec(cnt) = OldDistance;
-			if (OldDistance < BiSq_threshold) {
-				W(cnt, cnt) = pow((1 - pow(OldDistance / BiSq_threshold, 2)), 2);
-			}
 			cnt++;
 		}
 	}
-	//plane distance
+    //plane distance
 	for (auto &slices : NewSweep.planePts) {
 		SliceID = slices.first;
 		InterpTransform = EstTransform*(NewSweep.timeStamps[SliceID] - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
@@ -93,16 +88,13 @@ MatrixXd LMOptim::GetJacobian(VectorXd DistanceVec,MatrixXd &W, Sweep &OldSweep,
 					OldDistance) / Delta;
 			}
 			DistanceVec(cnt) = OldDistance;
-			if (OldDistance < BiSq_threshold) {
-				W(cnt, cnt) = pow((1 - pow(OldDistance / BiSq_threshold, 2)), 2);
-			}
 			cnt++;
 		}
 	}
 	return Jacobian;
 }
 
-VectorXd LMOptim::GetDistanceVec(Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform) {
+VectorXd LMOptim::GetDistanceVec( Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform) {
 	int SliceID;
 	VectorXd InterpTransform;
 	VectorXd DistanceVec = VectorXd::Zero(NewSweep.numEdges + NewSweep.numPlanes);
@@ -127,64 +119,52 @@ VectorXd LMOptim::GetDistanceVec(Sweep &OldSweep, Sweep &NewSweep, VectorXd EstT
 }
 
 VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
-	bool iterate1 = 1, iterate2, converged;
+	bool iterate1 = 1, iterate2;
 	int cnt = 0;
-	int n = 3;
 	int MaxIter = 10; // Max iteration number
-	double lambda = 1, lambda_scale = 10; // Lambda for LM
-	double convergence_threshold_residual = 1, convergence_threshold_diffs = 1; // threshold for LM convergence
-	double sum_diff = 0;
-	VectorXd prev_diffs = convergence_threshold_diffs*VectorXd::Zero(n);
+	double lambda = 1, lambda_scale = 10;
 	VectorXd OldTransform, NewTransform, OldDistanceVec, NewDistanceVec;
-	MatrixXd Jacobian, JTWJ, JTWJ_Diag, W;
+	MatrixXd Jacobian, JTJ, JTJ_Diag;
 	OldTransform << 0, 0, 0, 0, 0, 0;
 	// Find feature points in NewSweep
 	for (int sliceIdx = 0; sliceIdx < NewSweep.ptCloud.size(); sliceIdx++) {
 		NewSweep.FindEdges(sliceIdx);
 	}
-	// Iteration
+	// Jacobian and distance vector
 	while (iterate1) {
-		Jacobian = GetJacobian(OldDistanceVec, W, OldSweep, NewSweep, OldTransform);
-		JTWJ = Jacobian.transpose()*W*Jacobian;
-		JTWJ_Diag = MatrixXd::Zero(Jacobian.rows(), Jacobian.rows());
+		Jacobian = GetJacobian(OldDistanceVec, OldSweep, NewSweep, OldTransform);
+		JTJ = Jacobian.transpose()*Jacobian;
+		JTJ_Diag = MatrixXd::Zero(Jacobian.rows(), Jacobian.rows());
 		for (int diagIdx = 0; diagIdx < Jacobian.rows(); diagIdx++) {
-			JTWJ_Diag(diagIdx, diagIdx) = JTWJ(diagIdx, diagIdx);
+			JTJ_Diag(diagIdx, diagIdx) = JTJ(diagIdx, diagIdx);
 		}
 		// LM steps
 		iterate2 = 1;
 		while (iterate2) {
-			NewTransform = OldTransform - (JTWJ + lambda*JTWJ_Diag).inverse()*Jacobian.transpose()*W*OldDistanceVec;
+			NewTransform = OldTransform - (JTJ + lambda*JTJ_Diag).inverse()*Jacobian.transpose()*OldDistanceVec;
 			// Compare
 			NewDistanceVec = GetDistanceVec(OldSweep, NewSweep, NewTransform);
-			if (NewDistanceVec.norm() < OldDistanceVec.norm()) {
-				// improved: record n previous transform diffs, take new transform, tune lambda
-				for (int i = 0; i < n - 1; i++) {
-					prev_diffs(i) = prev_diffs(i + 1);
-				}
-				prev_diffs(n - 1) = (NewDistanceVec - OldDistanceVec).norm();
+			OldDistanceVec = GetDistanceVec(OldSweep, NewSweep, OldTransform);
+			if (NewDistanceVec.transpose()*NewDistanceVec < OldDistanceVec.transpose()*OldDistanceVec) {
+				// improved, take new transform, tune lambda
+				OldTransform = NewTransform;
 				lambda = lambda / lambda_scale;
 				cnt++;
 				iterate2 = 0;
-				OldTransform = NewTransform;
 			}
 			else {
 				// not improved, keep old transform, tune lambda
 				lambda = lambda*lambda_scale;
 				cnt++;
 			}
-			// convergence check: 1. Residual (d->0); 2. Variance of T in previous n iteration
-			if (NewDistanceVec.norm() < convergence_threshold_residual) {
-				converged = 1;
-			}
-			else if (prev_diffs.sum() < convergence_threshold_diffs) {
-				converged = 1;
-			}
-			if (converged) {
+			if (0) {
+				// convergence check
+				cout << "Transformation estimation converged!" << endl;
 				iterate1 = 0;
 				iterate2 = 0;
 			}
-			// max iteration check
 			if (cnt == MaxIter) {
+				// max iteration check
 				cout << "Max iteration reached! Optimality not guaranteed!" << endl;
 				iterate1 = 0;
 				iterate2 = 0;

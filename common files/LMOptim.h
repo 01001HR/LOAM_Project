@@ -15,8 +15,8 @@ public:
 	LMOptim();
 	~LMOptim();
 	static double Distance2EdgePlane(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int EnPflag);
-	MatrixXd GetJacobian(VectorXd DistanceVec, MatrixXd &W, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform);
-	VectorXd GetDistanceVec(Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform);
+	MatrixXd GetJacobian(VectorXd DistanceVec, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform);
+	VectorXd LMOptim::GetDistanceVec(Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform);
 	VectorXd TransformEstimate(Sweep &OldSweep, Sweep &NewSweep);
 
 };
