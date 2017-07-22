@@ -36,6 +36,10 @@ int main(void)
 	orderedPoints = OrganizePoints(output);
 
 	Sweep oldTestSweep, newTestSweep;
+
+	newTestSweep.transform.resize(6);
+	newTestSweep.transform << 1.0, 1.0, 1.0, 0.0, 0.0, M_PI/2.0;
+
 	int i = 0;
 	for (auto &slice : orderedPoints)
 	{
@@ -62,6 +66,8 @@ int main(void)
 	newTestSweep.tCur = i;
 
 	std::cout << "NewSweepFilled" << std::endl;
+
+	newTestSweep.TransformAll(newTestSweep.transform);
 
 	Vector3d p = { 1, 2, 3 }, p_, p2_, pf, pf2;
 

@@ -333,11 +333,11 @@ void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 
 void Sweep::TransformAll(VectorXd transform)
 {
-	for (auto &slice : ptCloud)
+	for (int i = 0; i < ptCloud.size(); i++)
 	{
-		for (auto &pt : slice)
+		for (auto &pt : ptCloud[i])
 		{
-			pt.xyz = ForwardTransform(pt.xyz, transform, (pt.GetTime() - tStart)/(tCur-tStart));
+			pt.xyz = ForwardTransform(pt.xyz, transform, (timeStamps[i] - tStart)/(tCur-tStart));
 		}
 	}
 }
