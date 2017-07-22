@@ -52,7 +52,7 @@ LoamPt::LoamPt(const std::vector<double> &xyzInput)
 
 LoamPt::LoamPt(const std::vector<double> &xyzInput, int sweepInput, int sliceInput, double time) // vector input constructor
 {
-	std::cout << "In here" << std::endl;
+	//std::cout << "In here" << std::endl;
 	if (SetXYZ(xyzInput) == true)
 	{
 		timeStamp = time;
@@ -64,7 +64,7 @@ LoamPt::LoamPt(const std::vector<double> &xyzInput, int sweepInput, int sliceInp
 
 LoamPt::LoamPt(const std::vector<double> &xyzInput, double time) // vector input constructor
 {
-	std::cout << "In here" << std::endl;
+	//std::cout << "In here" << std::endl;
 	if (SetXYZ(xyzInput) == true)
 	{
 		timeStamp = time;
