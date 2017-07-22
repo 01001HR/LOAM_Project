@@ -212,17 +212,17 @@ inline numType Dist(std::vector<numType> v1, const std::vector<numType> &v2)
 	return Dist(Minus(v1, v2));
 }
 
-inline void Merge(std::vector<std::vector<double>> &incomingArray, int idx1, int end1, int idx2, int end2)
+inline void Merge(std::vector<std::vector<double>> &incomingArray, int idx1, int end1, int idx2, int end2, int sortedColumn)
 {
 	std::vector<std::vector<double>> sortedArray; // initial allocation, numbers will be changed during sorting
 	int firstIdx = idx1, lastIdx = end2;
-	sortedArray.resize(lastIdx - firstIdx, { 0,0 });
+	sortedArray.resize(lastIdx - firstIdx, std::vector<double>(incomingArray[0].size()));
 	int i = 0;
 	for (;;)
 	{
 		if (idx1 < end1 && idx2 < end2)
 		{
-			if (incomingArray[idx1][0] <= incomingArray[idx2][0])
+			if (incomingArray[idx1][sortedColumn] <= incomingArray[idx2][sortedColumn])
 			{
 				sortedArray[i] = std::vector<double>(incomingArray[idx1]);
 				idx1++;
@@ -255,16 +255,29 @@ inline void Merge(std::vector<std::vector<double>> &incomingArray, int idx1, int
 	}
 }
 
-inline void MergeSort(std::vector<std::vector<double>> &vec)
+inline void MergeSort(std::vector<std::vector<double>> &vec, int sortedColumn)
 {
 	int size = 1;
 	int len = vec.size();
 	int start1, end1, start2, end2;
-	for (auto &elem : vec)
-	{
-		std::cout << " " << elem[0] << " " << elem[1];
-	}
-	std::cout << std::endl;
+	//for (auto &elem : vec)
+	//{
+	//	std::cout << " [";
+	//	for (int i = 0; i < elem.size(); i++)
+	//	{
+	//		if (i == sortedColumn)
+	//		{
+	//			std::cout << "| " << elem[i] << " |";
+	//		}
+	//		else
+	//		{
+	//			std::cout << " " << elem[i] << " ";
+	//		}
+	//	}
+	//	std::cout << "] ";
+	//}
+	//std::cout << std::endl;
+
 	while (size < vec.size())
 	{
 		for (int i = 0; i < len - size; i += size * 2)
@@ -273,12 +286,24 @@ inline void MergeSort(std::vector<std::vector<double>> &vec)
 			end1 = start1 + size;
 			start2 = end1;
 			end2 = (int)fmin(start2 + size, len);
-			Merge(vec, start1, end1, start2, end2);
-			for (auto &elem : vec)
-			{
-				std::cout << " " << elem[0] << " " << elem[1];
-			}
-			std::cout << std::endl;
+			Merge(vec, start1, end1, start2, end2, sortedColumn);
+			//for (auto &elem : vec)
+			//{
+			//	std::cout << " [";
+			//	for (int i = 0; i < elem.size(); i++)
+			//	{
+			//		if (i == sortedColumn)
+			//		{
+			//			std::cout << "| " << elem[i] << " |";
+			//		}
+			//		else
+			//		{
+			//			std::cout << " " << elem[i] << " ";
+			//		}
+			//	}
+			//	std::cout << "] ";
+			//}
+			//std::cout << std::endl;
 		}
 		size *= 2;
 	}
@@ -327,6 +352,37 @@ inline Vector3d ForwardTransform(const Vector3d &xyz, VectorXd &tVec, double tim
 
 	// Return the back-transformed point
 	return R*xyz + t;
+}
+
+template <class numType>
+std::vector<std::vector<std::vector<numType>>> OrganizePoints(std::vector<std::vector<numType>> &rawPointData)
+{
+	// Takes the raw pointcloud and then sorts the points into half-degree slices
+	std::vector<std::vector<std::vector<numType>>> slices;
+	double granularity = 0.5; // degree increment between slices
+	int numSlices = (int)(360.0 / granularity);
+	double theta, residual;
+	slices.resize(numSlices, {});
+	for (auto &elem : rawPointData)
+	{
+		theta = atan2(elem[1], elem[0])*180.0 / M_PI + 180.0;
+		residual = fmod(theta, granularity);
+		// if the point lies within 0.1deg of a slice bucket, add it to the corresponding slice list
+		if (residual < 0.1) 
+		{
+			slices[(int)(floor(theta)/granularity)].push_back(elem);
+		}
+		else if (residual > 0.4)
+		{
+			slices[(int)(floor(theta) / granularity + 1)].push_back(elem);
+		}
+	}
+	// sort each slice-list from bottom to top (by z-value of the points)
+	for (auto &slice : slices)
+	{
+		MergeSort(slice, 2);
+	}
+	return slices;
 }
 
 template <class numType, class castType>
