@@ -19,7 +19,7 @@ double LMOptim::Distance2EdgePlane(LoamPt &pt, Sweep &OldSweep, VectorXd EstTran
 	double Tmax = abs(EstTransform(1));
 	for (int Idx = 1; Idx < 6; Idx++) {
 		if (abs(EstTransform(Idx)) > Tmax) {
-Tmax = abs(EstTransform(Idx));
+            Tmax = abs(EstTransform(Idx));
 		}
 	}
 	if (Tmax < pow(10, -5)) {
@@ -135,12 +135,13 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 	double convergence_threshold_residual = 1, convergence_threshold_diffs = 1; // threshold for LM convergence
 	double sum_diff = 0;
 	VectorXd prev_diffs = convergence_threshold_diffs*VectorXd::Zero(n);
-	VectorXd OldTransform, NewTransform, OldDistanceVec, NewDistanceVec;
+	VectorXd OldTransform(6), NewTransform, OldDistanceVec, NewDistanceVec;
 	MatrixXd Jacobian, JTWJ, JTWJ_Diag, W;
 	OldTransform << 0, 0, 0, 0, 0, 0;
 	// Find feature points in NewSweep
 	for (int sliceIdx = 0; sliceIdx < NewSweep.ptCloud.size(); sliceIdx++) {
 		NewSweep.FindEdges(sliceIdx);
+		NewSweep.FindCorrespondences(sliceIdx, OldSweep);
 	}
 	// Iteration
 	while (iterate1) {

@@ -1,6 +1,10 @@
 #ifndef LIN_ALG_FNS
 #define LIN_ALG_FNS
 
+#ifndef M_PI
+#define M_PI 3.14159265358979
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
@@ -20,6 +24,7 @@
 #include <random>
 #include <fstream>
 #include <iterator>
+
 
 
 using namespace Eigen;
