@@ -265,7 +265,7 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 	bestDist = 10e10;
 
 	// Find edgepoint2 closest to nearPt1 located in either adjacent slice of the previous sweep
-	for (int i = curEdgePt.nearPt1[0] - 1; i < curEdgePt.nearPt1[0] + 2; i += 2)
+	for (auto &i : { curEdgePt.nearPt1[0] - 1, curEdgePt.nearPt1[0] + 1 })
 	{
 		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSlices])
 		{
@@ -323,7 +323,7 @@ void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 
 	bestDist = 10e10;
 	// Find the closest to planePoint to nearPt1 located in either adjacent slice of the previous sweep
-	for (int i = curEdgePt.nearPt1[0] - 1; i < curEdgePt.nearPt1[0] + 2; i += 2)
+	for (auto &i : { curEdgePt.nearPt1[0] - 1, curEdgePt.nearPt1[0] + 1 })
 	{
 		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSlices])
 		{
