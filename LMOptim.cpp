@@ -13,32 +13,51 @@ double LMOptim::Distance2EdgePlane(LoamPt &pt, Sweep &OldSweep, VectorXd EstTran
 	Vector3d xi = pt.xyz;
 	Vector3d xj = OldSweep.ptCloud[pt.nearPt1[0]][pt.nearPt1[1]].xyz;
 	Vector3d xl = OldSweep.ptCloud[pt.nearPt2[0]][pt.nearPt2[1]].xyz;
-	Vector3d T_trans, T_rot, omega, xi_hat;
+	Vector3d T_trans(3), T_rot(3), omega(3), xi_hat;
 	Matrix3d eye3 = Matrix3d::Identity(), omega_hat, R;
 	double theta, Distance;
-	double Tmax = abs(EstTransform(1));
-	for (int Idx = 1; Idx < 6; Idx++) {
+	double Tmax = abs(EstTransform(0)), Rmax = abs(EstTransform(3));
+	int Idx;
+	// check translation
+	for (Idx = 1; Idx < 3; Idx++) {
 		if (abs(EstTransform(Idx)) > Tmax) {
             Tmax = abs(EstTransform(Idx));
 		}
 	}
-	if (Tmax < pow(10, -5)) {
-		xi_hat = xi;
+	if (Tmax < pow(10, -3)) {
+		T_trans << 0, 0, 0; // no translation
+	}
+	else {
+		T_trans << EstTransform(0), EstTransform(1), EstTransform(2);
+	}
+	// check rotation
+	for (Idx = 4; Idx < 6; Idx++) {
+		if (abs(EstTransform(Idx)) > Rmax) {
+			Rmax = abs(EstTransform(Idx));
+		}
+	}
+	if (Rmax < pow(10, -3)) {
+		R = Matrix3d::Identity(); // no rotation
 	}
 	else {
 		T_rot << EstTransform(3), EstTransform(4), EstTransform(5);
 		theta = T_rot.norm();
-		T_trans << EstTransform(0), EstTransform(1), EstTransform(2);
 		omega << EstTransform(3) / theta, EstTransform(4) / theta, EstTransform(5) / theta;
 		omega_hat << 0, -omega(2), omega(1),
 			omega(2), 0, -omega(0),
 			-omega(1), omega(0), 0;
 		R = eye3 + omega_hat*sin(theta) + omega_hat*omega_hat*(1 - cos(theta));
-		R.transposeInPlace();
-		xi_hat = R*(xi - T_trans);
 	}
+    // 
+	xi_hat = R.inverse()*(xi - T_trans);
 	if (EnPflag == 1) {
-		Distance = ((xi_hat - xj).cross(xi_hat - xl)).norm() / (xj - xl).norm();
+		Vector3d a = xi_hat - xj;
+		Vector3d b = xj - xl;
+		Vector3d c = a.cross(b);
+		double d = c.norm();
+		double e = b.norm();
+		Distance = d / e;	
+		//Distance = ((xi_hat - xj).cross(xi_hat - xl)).norm() / (xj - xl).norm();
 	}
 	else if (EnPflag == 2) {
 		Vector3d xm = OldSweep.ptCloud[pt.nearPt3[0]][pt.nearPt3[1]].xyz;
@@ -89,7 +108,7 @@ MatrixXd LMOptim::GetJacobian(VectorXd DistanceVec,MatrixXd &W, Sweep &OldSweep,
 			for (int col = 0; col < 6; col++) {
 				InterpTransform_Delta = InterpTransform;
 				InterpTransform_Delta(col) = InterpTransform(col) + Delta;
-				Jacobian(cnt, col) = (Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], NewSweep, InterpTransform_Delta, (int)2) -
+				Jacobian(cnt, col) = (Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], OldSweep, InterpTransform_Delta, (int)2) -
 					OldDistance) / Delta;
 			}
 			DistanceVec(cnt) = OldDistance;
@@ -99,6 +118,7 @@ MatrixXd LMOptim::GetJacobian(VectorXd DistanceVec,MatrixXd &W, Sweep &OldSweep,
 			cnt++;
 		}
 	}
+	
 	return Jacobian;
 }
 
@@ -132,7 +152,7 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 	int n = 3;
 	int MaxIter = 10; // Max iteration number
 	double lambda = 1, lambda_scale = 10; // Lambda for LM
-	double convergence_threshold_residual = 1, convergence_threshold_diffs = 1; // threshold for LM convergence
+	double convergence_threshold_residual = 10, convergence_threshold_diffs = 0.1; // threshold for LM convergence
 	double sum_diff = 0;
 	VectorXd prev_diffs = convergence_threshold_diffs*VectorXd::Zero(n);
 	VectorXd OldTransform(6), NewTransform, OldDistanceVec, NewDistanceVec;
@@ -147,8 +167,8 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 	while (iterate1) {
 		Jacobian = GetJacobian(OldDistanceVec, W, OldSweep, NewSweep, OldTransform);
 		JTWJ = Jacobian.transpose()*W*Jacobian;
-		JTWJ_Diag = MatrixXd::Zero(Jacobian.rows(), Jacobian.rows());
-		for (int diagIdx = 0; diagIdx < Jacobian.rows(); diagIdx++) {
+		JTWJ_Diag = MatrixXd::Zero(6, 6);
+		for (int diagIdx = 0; diagIdx < 6; diagIdx++) {
 			JTWJ_Diag(diagIdx, diagIdx) = JTWJ(diagIdx, diagIdx);
 		}
 		// LM steps
@@ -192,5 +212,6 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 			}
 		}
 	}
+
 	return NewTransform;
 }

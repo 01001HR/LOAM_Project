@@ -249,7 +249,7 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 	std::vector<double> distances;
 
 	// Find the nearest edgepoint located in the +/- n-neighboring slices of the previous sweep
-	for (int i = curEdgePt.sliceID - 2 ; curEdgePt.sliceID + i < 3; i++)
+	for (int i = curEdgePt.sliceID - 2 ; i < curEdgePt.sliceID + 3; i++)
 	{
 		for (auto &oldIdx : OldSweep.edgePts[i%maxNumSlices])
 		{
