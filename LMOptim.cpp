@@ -56,11 +56,7 @@ double LMOptim::Distance2EdgePlane(LoamPt &pt, Sweep &OldSweep, VectorXd EstTran
 		Vector3d c = a.cross(b);
 		double d = c.norm();
 		double e = b.norm();
-		Distance = d / e;
-		
-		
-		
-		
+		Distance = d / e;	
 		//Distance = ((xi_hat - xj).cross(xi_hat - xl)).norm() / (xj - xl).norm();
 	}
 	else if (EnPflag == 2) {
