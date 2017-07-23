@@ -14,6 +14,7 @@ Sweep::~Sweep()
 Sweep::Sweep(std::vector<std::vector<double>> &inputSlice)
 {
 	sweepID = NULL;
+	transform.resize(6);
 	AddSlice(sweepID, numSlices + 1, (double)NULL, inputSlice);
 }
 
