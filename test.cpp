@@ -69,7 +69,19 @@ int main(void)
 
 	std::cout << "NewSweepFilled" << std::endl;
 
+	std::cout << "Transforming New sweep" << std::endl;
 	newTestSweep.TransformAll(newTestSweep.transform);
+
+	std::cout << "Finding All Edges" << std::endl;
+	newTestSweep.FindAllEdges();
+
+	std::cout << "Finding correspondences" << std::endl;
+	for (int i = 0; i < newTestSweep.ptCloud.size(); i++)
+	{
+		std::cout << i << std::endl;
+		newTestSweep.FindCorrespondences(i, oldTestSweep);
+	}
+	std::cout << "Done with correspondences" << std::endl;
 
 	Vector3d p = { 1, 2, 3 }, p_, p2_, pf, pf2;
 

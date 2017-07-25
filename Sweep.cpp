@@ -41,6 +41,16 @@ void Sweep::AddSlice(std::vector<std::vector<double>> &inputSlice)
 	numSlices++;
 }
 
+void Sweep::FindAllEdges(void)
+{
+	// Loop through all current slices and find best feature points
+	for (int i = 0; i < ptCloud.size(); i++)
+	{
+		std::cout << "Finding Edges in i = " << i << std::endl;
+		FindEdges(ptCloud[i][0].sliceID);
+	}
+}
+
 void Sweep::FindEdges(int sliceIdx)
 {
 	auto &slice = ptCloud[sliceIdx];
@@ -226,6 +236,11 @@ double Sweep::Dist2Plane(Vector3d &x_, Vector3d &x1, Vector3d &x2, Vector3d &x3)
 
 void Sweep::FindCorrespondences(int sliceNumber, Sweep &OldSweep)
 {
+	std::cout << sliceNumber << std::endl;
+	if (sliceNumber == 718)
+	{
+		std::cout << "Seems to break here" << std::endl;
+	}
 	// Find all edge-point correspondences
 	for (auto &elem : edgePts[sliceNumber])
 	{
@@ -249,16 +264,17 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 	std::vector<double> distances;
 
 	// Find the nearest edgepoint located in the +/- n-neighboring slices of the previous sweep
+	int j;
 	for (int i = curEdgePt.sliceID - 2; i < curEdgePt.sliceID + 3; i++)
 	{
-		i = i % maxNumSlices;
-		for (auto &oldIdx : OldSweep.edgePts[i])
+		j = i % maxNumSlices;
+		for (auto &oldIdx : OldSweep.edgePts[j])
 		{
-			tempDist = (OldSweep.ptCloud[i][oldIdx].xyz - x_).norm();
+			tempDist = (OldSweep.ptCloud[j][oldIdx].xyz - x_).norm();
 			if (tempDist < bestDist)
 			{
 				bestDist = tempDist;
-				bestPt = { i, oldIdx };
+				bestPt = { j, oldIdx };
 			}
 		}
 	}
@@ -292,16 +308,17 @@ void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 	std::vector<double> distances;
 
 	// Find the nearest planePoint located in the +/- n-neighboring slices of the previous sweep
+	int j;
 	for (int i = curEdgePt.sliceID - 2; curEdgePt.sliceID + i < 3; i++)
 	{
-		i = i % maxNumSlices;
-		for (auto &oldIdx : OldSweep.edgePts[i])
+		j = i % maxNumSlices;
+		for (auto &oldIdx : OldSweep.edgePts[j])
 		{
-			tempDist = (OldSweep.ptCloud[i][oldIdx].xyz - x_).norm();
+			tempDist = (OldSweep.ptCloud[j][oldIdx].xyz - x_).norm();
 			if (tempDist < bestDist)
 			{
 				bestDist = tempDist;
-				bestPt = { i, oldIdx };
+				bestPt = { j, oldIdx };
 			}
 		}
 	}
