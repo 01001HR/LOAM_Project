@@ -10,6 +10,7 @@ LMOptim::~LMOptim() {
 
 double LMOptim::Distance2EdgePlane(LoamPt &pt, Sweep &OldSweep, VectorXd EstTransform, int EnPflag) {
 	// EnPflag = 1: Edge | EnPflag = 2: Plane
+	Sweep TEMP;
 	Vector3d xi = pt.xyz;
 	Vector3d xj = OldSweep.ptCloud[pt.nearPt1[0]][pt.nearPt1[1]].xyz;
 	Vector3d xl = OldSweep.ptCloud[pt.nearPt2[0]][pt.nearPt2[1]].xyz;
@@ -51,17 +52,19 @@ double LMOptim::Distance2EdgePlane(LoamPt &pt, Sweep &OldSweep, VectorXd EstTran
     // 
 	xi_hat = R.inverse()*(xi - T_trans);
 	if (EnPflag == 1) {
-		Vector3d a = xi_hat - xj;
-		Vector3d b = xj - xl;
-		Vector3d c = a.cross(b);
-		double d = c.norm();
-		double e = b.norm();
-		Distance = d / e;	
+		//Vector3d a = xi_hat - xj;
+		//Vector3d b = xj - xl;
+		//Vector3d c = a.cross(b);
+		//double d = c.norm();
+		//double e = b.norm();
+		//Distance = d / e;	
 		//Distance = ((xi_hat - xj).cross(xi_hat - xl)).norm() / (xj - xl).norm();
+		Distance = TEMP.Dist2Line(xi_hat, xj, xl);
 	}
 	else if (EnPflag == 2) {
 		Vector3d xm = OldSweep.ptCloud[pt.nearPt3[0]][pt.nearPt3[1]].xyz;
-		Distance = abs((xi_hat - xj).dot((xj - xl).cross(xj - xm))) / ((xj - xl).cross(xj - xm)).norm();
+		//Distance = abs((xi_hat - xj).dot((xj - xl).cross(xj - xm))) / ((xj - xl).cross(xj - xm)).norm();
+		Distance = TEMP.Dist2Plane(xi_hat, xj, xl, xm);
 	}
 	else {
 		cout << "Edge or Plane indicator not provided!" << endl;
@@ -96,6 +99,7 @@ MatrixXd LMOptim::GetJacobian(VectorXd DistanceVec,MatrixXd &W, Sweep &OldSweep,
 			if (OldDistance < BiSq_threshold) {
 				W(cnt, cnt) = pow((1 - pow(OldDistance / BiSq_threshold, 2)), 2);
 			}
+			cout <<"Jacobian row: "<< cnt << endl;
 			cnt++;
 		}
 	}
@@ -115,6 +119,7 @@ MatrixXd LMOptim::GetJacobian(VectorXd DistanceVec,MatrixXd &W, Sweep &OldSweep,
 			if (OldDistance < BiSq_threshold) {
 				W(cnt, cnt) = pow((1 - pow(OldDistance / BiSq_threshold, 2)), 2);
 			}
+			cout <<"Jacobian row: "<< cnt << endl;
 			cnt++;
 		}
 	}
@@ -160,8 +165,9 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 	OldTransform << 0, 0, 0, 0, 0, 0;
 	// Find feature points in NewSweep
 	cout << "Start looking for correspondences" << endl;
+	NewSweep.FindAllEdges();
+	OldSweep.FindAllEdges();
 	for (int sliceIdx = 0; sliceIdx < NewSweep.ptCloud.size(); sliceIdx++) {
-		NewSweep.FindEdges(sliceIdx);
 		NewSweep.FindCorrespondences(sliceIdx, OldSweep);		
 	}
 	// Iteration
