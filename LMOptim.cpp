@@ -73,7 +73,7 @@ double LMOptim::Distance2EdgePlane(LoamPt &pt, Sweep &OldSweep, VectorXd EstTran
 	return Distance;
 }
 
-MatrixXd LMOptim::GetJacobian(VectorXd DistanceVec,MatrixXd &W, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform) {
+MatrixXd LMOptim::GetJacobian(VectorXd &DistanceVec,MatrixXd &W, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform) {
 	MatrixXd Jacobian = MatrixXd::Zero(NewSweep.numEdges + NewSweep.numPlanes, 6);
 	VectorXd InterpTransform_Delta, InterpTransform;
 	DistanceVec = VectorXd::Zero(NewSweep.numEdges + NewSweep.numPlanes);
@@ -175,6 +175,8 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 	while (iterate1) {
 		Jacobian = GetJacobian(OldDistanceVec, W, OldSweep, NewSweep, OldTransform);
 		JTWJ = Jacobian.transpose()*W*Jacobian;
+		cout << "J: " << endl << Jacobian << endl;
+		cout << "JTWJ: " << endl << JTWJ << endl;
 		JTWJ_Diag = MatrixXd::Zero(6, 6);
 		for (int diagIdx = 0; diagIdx < 6; diagIdx++) {
 			JTWJ_Diag(diagIdx, diagIdx) = JTWJ(diagIdx, diagIdx);
@@ -221,5 +223,6 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 		}
 	}
 
+	getchar();
 	return NewTransform;
 }

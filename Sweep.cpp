@@ -70,7 +70,7 @@ void Sweep::FindEdges(int sliceIdx)
 		distVec -= slice[firstPt + i].xyz;
 	}
 
-	curvatures[firstPt] = { distVec.norm() / slice[firstPt].xyz.norm(), (double)firstPt };
+	curvatures[firstPt] = { distVec.norm() / (slice[firstPt].xyz.norm()), (double)firstPt };
 
 	// calculate curvature values for all points after the first point
 	for (int i = firstPt + 1; i < lastPt; i++)
@@ -124,6 +124,8 @@ void Sweep::SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curve
 		}
 		planeTurn = !planeTurn;
 	}
+
+
 }
 
 bool Sweep::FindBestEdgePt(int sliceIdx, std::vector<std::vector<double>> &curveVec)
@@ -253,20 +255,15 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 {
 	// Back-transform the point to the beginning of the current sweep.
 	Vector3d x_ = BackTransform(curEdgePt.xyz, transform, (timeStamps[curEdgePt.sliceID] - tStart)/(tCur - tStart));
-
 	std::vector<int> bestPt = { 0,0 };
 	double bestDist = 10e10, tempDist;
 	std::vector<double> distances;
-
 	// Find the nearest edgepoint located in the +/- n-neighboring slices of the previous sweep
+	int n = 2; // n-neighboring
 	int j;
-	for (int i = curEdgePt.sliceID - 2; i < curEdgePt.sliceID + 2; i++)
+	for (int i = curEdgePt.sliceID - n; i < curEdgePt.sliceID + n + 1; i++)
 	{
 		j = MyMod(i, maxNumSlices);
-		if (j < 0)
-		{
-			std::cout << "Slice Idx = " << j << std::endl;
-		}
 		for (auto &oldIdx : OldSweep.edgePts[j])
 		{
 			tempDist = (OldSweep.ptCloud[j][oldIdx].xyz - x_).norm();
@@ -279,7 +276,6 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 	}
 	curEdgePt.nearPt1 = bestPt;
 	bestDist = 10e10;
-
 	// Find edgepoint2 closest to nearPt1 located in either adjacent slice of the previous sweep
 	for (auto &i : { MyMod(curEdgePt.nearPt1[0] - 1, maxNumSlices), MyMod(curEdgePt.nearPt1[0] + 1, maxNumSlices) })
 	{
@@ -294,7 +290,7 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 		}
 	}
 	curEdgePt.nearPt2 = bestPt;
-	curEdgePt.dist = Dist2Line(x_, ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz, ptCloud[curEdgePt.nearPt2[0]][curEdgePt.nearPt2[1]].xyz); // this needs to be changed
+	//curEdgePt.dist = Dist2Line(x_, ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz, ptCloud[curEdgePt.nearPt2[0]][curEdgePt.nearPt2[1]].xyz); // this needs to be changed
 }
 
 void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
@@ -354,7 +350,7 @@ void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 		}
 	}
 	curEdgePt.nearPt2 = bestPt;
-	curEdgePt.dist = Dist2Plane(x_, ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz, ptCloud[curEdgePt.nearPt2[0]][curEdgePt.nearPt2[1]].xyz, ptCloud[curEdgePt.nearPt3[0]][curEdgePt.nearPt3[1]].xyz); // this needs to be changed
+	//curEdgePt.dist = Dist2Plane(x_, ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz, ptCloud[curEdgePt.nearPt2[0]][curEdgePt.nearPt2[1]].xyz, ptCloud[curEdgePt.nearPt3[0]][curEdgePt.nearPt3[1]].xyz); // this needs to be changed
 }
 
 void Sweep::TransformAll(VectorXd transform)
