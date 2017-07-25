@@ -45,9 +45,6 @@ int main(void)
 		newTestSweep.timeStamps.push_back(719+i);
 		newTestSweep.tCur = 719+i;
 		i++;
-		if (i == 19) {
-			break;
-		}
 	}
 	newTestSweep.tEnd = 719+i;
 	newTestSweep.tCur = 719+i;

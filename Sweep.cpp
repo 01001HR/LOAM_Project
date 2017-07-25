@@ -52,7 +52,6 @@ void Sweep::FindAllEdges(void)
 
 void Sweep::FindEdges(int sliceIdx)
 {
-	sliceIdx = sliceIdx % maxNumSlices;
 	auto &slice = ptCloud[sliceIdx];
 	std::vector<std::vector<double>> curvatures; // {curvatureValue, ptIndex}
 	int numPts = slice.size();
@@ -88,6 +87,10 @@ void Sweep::FindEdges(int sliceIdx)
 
 void Sweep::SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curveVec, int startIdx, int endIdx)
 {
+	if (sliceIdx == 719)
+	{
+		std::cout << sliceIdx << std::endl;
+	}
 	std::vector<std::vector<double>> curvatures;
 	curvatures.resize(endIdx - startIdx);
 
@@ -162,13 +165,13 @@ bool Sweep::FindBestPlanePt(int sliceIdx, std::vector<std::vector<double>> &curv
 
 bool Sweep::EvaluateEdge(int sliceIdx, std::vector<double> &potentialPt) // Checks to make sure that no nearby points are drastically closer to the sensor
 {
-	double ptDist = ptCloud[sliceIdx][potentialPt[1]].xyz[0]; // treating ptDist[0] = X, the depth-distance w.r.t. sensor
+	double ptDist = ptCloud[sliceIdx][potentialPt[1]].xyz[0];
 	for (int i = -(kernalSize / 2); i < 0; i++)
 	{
 		if (potentialPt[1] + i < 0) {
 			continue;
 		}
-		else if ((ptCloud[sliceIdx][potentialPt[1] + i + 1].xyz[0] - ptCloud[sliceIdx][potentialPt[1] + i].xyz[0]) > edgeFindThreshold) // large increase in distance as we approach the potential point == occlusion
+		else if ((ptCloud[sliceIdx][potentialPt[1] + i + 1].xyz.norm() - ptCloud[sliceIdx][potentialPt[1] + i].xyz.norm()) > edgeFindThreshold) // large increase in distance as we approach the potential point == occlusion
 		{
 			return false;
 		}
@@ -179,7 +182,7 @@ bool Sweep::EvaluateEdge(int sliceIdx, std::vector<double> &potentialPt) // Chec
 		{
 			break;
 		}
-		else if ((ptCloud[sliceIdx][potentialPt[1] + i + 1].xyz[0] - ptCloud[sliceIdx][potentialPt[1] + i].xyz[0]) < -edgeFindThreshold) // large decrease in distance as we move away from the potential point == occlusion
+		else if ((ptCloud[sliceIdx][potentialPt[1] + i + 1].xyz.norm() - ptCloud[sliceIdx][potentialPt[1] + i].xyz.norm()) < -edgeFindThreshold) // large decrease in distance as we move away from the potential point == occlusion
 		{
 			return false;
 		}
@@ -190,15 +193,14 @@ bool Sweep::EvaluateEdge(int sliceIdx, std::vector<double> &potentialPt) // Chec
 
 bool Sweep::EvaluatePlane(int sliceIdx, std::vector<double> &potentialPt) // Checks to make sure that no nearby points are drastically closer to the sensor
 {
-	Vector3d distVec;
 	Vector3d Xi = ptCloud[sliceIdx][potentialPt[1]].xyz;
-	distVec = kernalSize*Xi;
-	for (int i = -kernalSize / 2; i < kernalSize / 2; i++)
+	Vector3d distVec = -Xi;
+	for (int i = -(kernalSize / 2); i < (kernalSize / 2) + 1; i++)
 	{
-		distVec -= ptCloud[sliceIdx][potentialPt[1] + i].xyz;
+		distVec += (i >= 0 ? 1 : -1) * ptCloud[sliceIdx][potentialPt[1] + i].xyz;
 	}
-
-	if (distVec.dot(Xi) / (distVec.norm()*Xi.norm()) >= 0.5) // a*b = |a||b|cos(theta) ---> dot(a,b)/(|a||b|) = cos(theta)
+	// check if angle to plane pt is greater than 15deg
+	if (abs(distVec.dot(Xi) / (distVec.norm()*Xi.norm())) <= 0.95) // a*b = |a||b|cos(theta) ---> dot(a,b)/(|a||b|) = cos(theta)
 	{
 		return true;
 	}
