@@ -236,11 +236,6 @@ double Sweep::Dist2Plane(Vector3d &x_, Vector3d &x1, Vector3d &x2, Vector3d &x3)
 
 void Sweep::FindCorrespondences(int sliceNumber, Sweep &OldSweep)
 {
-	std::cout << sliceNumber << std::endl;
-	if (sliceNumber == 718)
-	{
-		std::cout << "Seems to break here" << std::endl;
-	}
 	// Find all edge-point correspondences
 	for (auto &elem : edgePts[sliceNumber])
 	{

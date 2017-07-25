@@ -12,23 +12,6 @@ int main(void)
 
 	std::vector<double> tt = newMap[1], b = newMap[2];
 
-	int key;
-	/*for (auto &keyValPair : newMap)
-	{
-		key = keyValPair.first;
-		std::cout << key << std::endl;
-	}
-
-	for (auto &elem : tt)
-	{
-		std::cout << elem << std::endl;
-	}
-
-	for (auto &elem : b)
-	{
-		std::cout << elem << std::endl;
-	}*/
-
 	std::vector<std::vector<double>> output = ParseBinary<float, double>((float)1, (double)1, "velo_test.bin");
 
 	std::vector<std::vector<std::vector<double>>> orderedPoints;
@@ -59,7 +42,6 @@ int main(void)
 	for (auto &slice : orderedPoints)
 	{
 		newTestSweep.AddSlice(1, i, 719 + i, slice);
-		//newTestSweep.AddSlice(0, i, i, slice);
 		newTestSweep.timeStamps.push_back(719+i);
 		newTestSweep.tCur = 719+i;
 		i++;
@@ -119,25 +101,6 @@ int main(void)
 	}
 
 	Vector3d xyz2 = NewSweep.ptCloud[0][6].xyz;
-
-	//std::cout << "There are " << NewSweep.ptCloud[0].size() << " pts in the first slice of our ptcloud" << std::endl;
-
-	//double c = Mult(std::vector<double>{ 1, 1, 1 }, std::vector<double>{ 1 });
-
-	//std::vector<double> &d = Mult(std::vector<double>{ 1, 1, 1 }, 2.0);
-	//std::vector<double> &e = Mult(2.0, std::vector<double>{ 1, 1, 1 });
-
-	/*double a = 5;
-
-	double f = Mult(d, e);
-
-	std::vector<double> g = Divide(d, 3.0);
-
-	double h = Dist(g);
-
-	double hh = Dist(e, g);
-
-	std::vector<double> aa = Divide(e, 3.0);*/
 
 	std::vector<std::vector<double>> unsortedVec, sortedVec;
 
