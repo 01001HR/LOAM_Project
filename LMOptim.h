@@ -1,8 +1,6 @@
 #ifndef LMOPTIM_CLASS
 #define LMOPTIM_CLASS
 
-
-
 #include "Sweep.h"
 
 class LMOptim
