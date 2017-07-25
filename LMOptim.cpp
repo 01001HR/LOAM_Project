@@ -159,11 +159,13 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 	MatrixXd Jacobian, JTWJ, JTWJ_Diag, W;
 	OldTransform << 0, 0, 0, 0, 0, 0;
 	// Find feature points in NewSweep
+	cout << "Start looking for correspondences" << endl;
 	for (int sliceIdx = 0; sliceIdx < NewSweep.ptCloud.size(); sliceIdx++) {
 		NewSweep.FindEdges(sliceIdx);
-		NewSweep.FindCorrespondences(sliceIdx, OldSweep);
+		NewSweep.FindCorrespondences(sliceIdx, OldSweep);		
 	}
 	// Iteration
+	cout << "Start LM iteration" << endl;
 	while (iterate1) {
 		Jacobian = GetJacobian(OldDistanceVec, W, OldSweep, NewSweep, OldTransform);
 		JTWJ = Jacobian.transpose()*W*Jacobian;
@@ -184,15 +186,15 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 				}
 				prev_diffs(n - 1) = (NewDistanceVec - OldDistanceVec).norm();
 				lambda = lambda / lambda_scale;
-				cnt++;
 				iterate2 = 0;
 				OldTransform = NewTransform;
 			}
 			else {
 				// not improved, keep old transform, tune lambda
 				lambda = lambda*lambda_scale;
-				cnt++;
 			}
+			cout << "LM iteration " << cnt << endl;
+			cnt++;
 			// convergence check: 1. Residual (d->0); 2. Variance of T in previous n iteration
 			if (NewDistanceVec.norm() < convergence_threshold_residual) {
 				converged = 1;

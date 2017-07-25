@@ -13,7 +13,7 @@ int main(void)
 	std::vector<double> tt = newMap[1], b = newMap[2];
 
 	int key;
-	for (auto &keyValPair : newMap)
+	/*for (auto &keyValPair : newMap)
 	{
 		key = keyValPair.first;
 		std::cout << key << std::endl;
@@ -27,7 +27,7 @@ int main(void)
 	for (auto &elem : b)
 	{
 		std::cout << elem << std::endl;
-	}
+	}*/
 
 	std::vector<std::vector<double>> output = ParseBinary<float, double>((float)1, (double)1, "velo_test.bin");
 
@@ -97,7 +97,7 @@ int main(void)
 		newSlicePoints.push_back({ i,i,i });
 	}
 
-	std::cout << "Size of this point = " << pt1.size() << std::endl;
+	//std::cout << "Size of this point = " << pt1.size() << std::endl;
 
 	Sweep NewSweep;
 
@@ -108,14 +108,14 @@ int main(void)
 
 	Vector3d xyz2 = NewSweep.ptCloud[0][6].xyz;
 
-	std::cout << "There are " << NewSweep.ptCloud[0].size() << " pts in the first slice of our ptcloud" << std::endl;
+	//std::cout << "There are " << NewSweep.ptCloud[0].size() << " pts in the first slice of our ptcloud" << std::endl;
 
-	double c = Mult(std::vector<double>{ 1, 1, 1 }, std::vector<double>{ 1 });
+	//double c = Mult(std::vector<double>{ 1, 1, 1 }, std::vector<double>{ 1 });
 
-	std::vector<double> &d = Mult(std::vector<double>{ 1, 1, 1 }, 2.0);
-	std::vector<double> &e = Mult(2.0, std::vector<double>{ 1, 1, 1 });
+	//std::vector<double> &d = Mult(std::vector<double>{ 1, 1, 1 }, 2.0);
+	//std::vector<double> &e = Mult(2.0, std::vector<double>{ 1, 1, 1 });
 
-	double a = 5;
+	/*double a = 5;
 
 	double f = Mult(d, e);
 
@@ -125,7 +125,7 @@ int main(void)
 
 	double hh = Dist(e, g);
 
-	std::vector<double> aa = Divide(e, 3.0);
+	std::vector<double> aa = Divide(e, 3.0);*/
 
 	std::vector<std::vector<double>> unsortedVec, sortedVec;
 
@@ -142,7 +142,7 @@ int main(void)
 
 	for (double i = 0; i < 100; i++)
 	{
-		std::cout << (int)i / 25 << std::endl;
+		//std::cout << (int)i / 25 << std::endl;
 		switch ((int)i / 25)
 		{
 		case 0:
