@@ -1,5 +1,4 @@
 #include "Sweep.h"
-#include "LMOptim.h"
 
 Sweep::Sweep()
 {
@@ -53,6 +52,7 @@ void Sweep::FindAllEdges(void)
 
 void Sweep::FindEdges(int sliceIdx)
 {
+	sliceIdx = sliceIdx % maxNumSlices;
 	auto &slice = ptCloud[sliceIdx];
 	std::vector<std::vector<double>> curvatures; // {curvatureValue, ptIndex}
 	int numPts = slice.size();
@@ -262,7 +262,11 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 	int j;
 	for (int i = curEdgePt.sliceID - 2; i < curEdgePt.sliceID + 2; i++)
 	{
-		j = i % maxNumSlices;
+		j = MyMod(i, maxNumSlices);
+		if (j < 0)
+		{
+			std::cout << "Slice Idx = " << j << std::endl;
+		}
 		for (auto &oldIdx : OldSweep.edgePts[j])
 		{
 			tempDist = (OldSweep.ptCloud[j][oldIdx].xyz - x_).norm();
@@ -277,7 +281,7 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 	bestDist = 10e10;
 
 	// Find edgepoint2 closest to nearPt1 located in either adjacent slice of the previous sweep
-	for (auto &i : { (curEdgePt.nearPt1[0] - 1) % maxNumSlices, (curEdgePt.nearPt1[0] + 1) % maxNumSlices })
+	for (auto &i : { MyMod(curEdgePt.nearPt1[0] - 1, maxNumSlices), MyMod(curEdgePt.nearPt1[0] + 1, maxNumSlices) })
 	{
 		for (auto &oldIdx : OldSweep.edgePts[i])
 		{
@@ -306,7 +310,7 @@ void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 	int j;
 	for (int i = curEdgePt.sliceID - 2; curEdgePt.sliceID + i < 3; i++)
 	{
-		j = i % maxNumSlices;
+		j = MyMod(i, maxNumSlices);
 		for (auto &oldIdx : OldSweep.edgePts[j])
 		{
 			tempDist = (OldSweep.ptCloud[j][oldIdx].xyz - x_).norm();
@@ -337,7 +341,7 @@ void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 
 	bestDist = 10e10;
 	// Find the closest to planePoint to nearPt1 located in either adjacent slice of the previous sweep
-	for (auto &i : { (curEdgePt.nearPt1[0] - 1) % maxNumSlices, (curEdgePt.nearPt1[0] + 1) % maxNumSlices })
+	for (auto &i : { MyMod(curEdgePt.nearPt1[0] - 1, maxNumSlices), MyMod(curEdgePt.nearPt1[0] + 1, maxNumSlices) })
 	{
 		for (auto &oldIdx : OldSweep.edgePts[i])
 		{

@@ -1,4 +1,4 @@
-#include "Sweep.h"
+//#include "Sweep.h"
 #include "LMOptim.h"
 //#include <xmmintrin.h>
 //#include <pmmintrin.h>
@@ -58,6 +58,7 @@ int main(void)
 	newTestSweep.TransformAll(newTestSweep.transform);
 
 	std::cout << "Finding All Edges" << std::endl;
+	oldTestSweep.FindAllEdges();
 	newTestSweep.FindAllEdges();
 
 	std::cout << "Finding correspondences" << std::endl;
