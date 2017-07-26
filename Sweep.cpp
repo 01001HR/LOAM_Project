@@ -45,7 +45,7 @@ void Sweep::FindAllEdges(void)
 	// Loop through all current slices and find best feature points
 	for (int i = 0; i < ptCloud.size(); i++)
 	{
-		std::cout << "Finding Edges in i = " << i << std::endl;
+		//std::cout << "Finding Edges in i = " << i << std::endl;
 		FindEdges(ptCloud[i][0].sliceID);
 	}
 }
