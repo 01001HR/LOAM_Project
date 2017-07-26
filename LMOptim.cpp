@@ -73,56 +73,107 @@ double LMOptim::Distance2EdgePlane(LoamPt &pt, Sweep &OldSweep, VectorXd EstTran
 	return Distance;
 }
 
-MatrixXd LMOptim::GetJacobian(VectorXd DistanceVec,MatrixXd &W, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform) {
+MatrixXd LMOptim::GetJacobian(VectorXd &DistanceVec, MatrixXd &W, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform) {
 	MatrixXd Jacobian = MatrixXd::Zero(NewSweep.numEdges + NewSweep.numPlanes, 6);
 	VectorXd InterpTransform_Delta, InterpTransform;
 	DistanceVec = VectorXd::Zero(NewSweep.numEdges + NewSweep.numPlanes);
 	W = MatrixXd::Zero(NewSweep.numEdges + NewSweep.numPlanes,  NewSweep.numEdges + NewSweep.numPlanes);
-	double Delta = pow(10, -6); //numerical Jacobian step-size
 	double BiSq_threshold = 10; //weighting func: w(x) = (1-(x/BiSq_threshold)^2)^2
-	double OldDistance;
+	double OldDistance, tRatio;
 	int cnt = 0;
 	int SliceID;
 	//edge distance
-	for (auto &slices : NewSweep.edgePts) {
-		SliceID = slices.first;
-		InterpTransform = EstTransform*(NewSweep.timeStamps[SliceID] - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
-		for (auto &entry : slices.second) {
-			OldDistance = Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], OldSweep, InterpTransform, (int)1);
-			for (int col = 0; col < 6; col++) {
-				InterpTransform_Delta = InterpTransform;
-				InterpTransform_Delta(col) = InterpTransform(col) + Delta;
-				Jacobian(cnt, col) = (Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], OldSweep, InterpTransform_Delta, (int)1) -
-					OldDistance) / Delta;
+
+	for (auto &slice : NewSweep.edgePts)
+	{
+		tRatio = (NewSweep.timeStamps[slice.first]+1 - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
+		InterpTransform = tRatio*EstTransform;
+		for (auto &idx : slice.second)
+		{
+			auto &x = NewSweep.ptCloud[slice.first][idx];
+			DistanceVec(cnt) = NewSweep.Dist2Line(BackTransform(x.xyz, EstTransform, tRatio), OldSweep.ptCloud[x.nearPt1[0]][x.nearPt1[1]].xyz, OldSweep.ptCloud[x.nearPt2[0]][x.nearPt2[1]].xyz);
+			for (int col = 0; col < 6; col++)
+			{
+				InterpTransform_Delta = EstTransform;
+				InterpTransform_Delta(col) = EstTransform(col) + delta;
+				Jacobian(cnt, col) = (NewSweep.Dist2Line(BackTransform(x.xyz, InterpTransform_Delta, tRatio), OldSweep.ptCloud[x.nearPt1[0]][x.nearPt1[1]].xyz, OldSweep.ptCloud[x.nearPt2[0]][x.nearPt2[1]].xyz)
+				- DistanceVec(cnt)) / delta;
+				//cout << NewSweep.Dist2Line(BackTransform(x.xyz, InterpTransform_Delta, tRatio), OldSweep.ptCloud[x.nearPt1[0]][x.nearPt1[1]].xyz, OldSweep.ptCloud[x.nearPt2[0]][x.nearPt2[1]].xyz)
+					//<< " " << DistanceVec(cnt) << endl;
+				//cout << InterpTransform_Delta << endl << EstTransform << endl;
 			}
-			DistanceVec(cnt) = OldDistance;
-			if (OldDistance < BiSq_threshold) {
-				W(cnt, cnt) = pow((1 - pow(OldDistance / BiSq_threshold, 2)), 2);
+			if (DistanceVec(cnt) < BiSq_threshold) {
+				W(cnt, cnt) = pow((1 - pow(DistanceVec(cnt) / BiSq_threshold, 2)), 2);
 			}
-			cout <<"Jacobian row: "<< cnt << endl;
+			//W(cnt, cnt) = 1;
 			cnt++;
 		}
 	}
-	//plane distance
-	for (auto &slices : NewSweep.planePts) {
-		SliceID = slices.first;
-		InterpTransform = EstTransform*(NewSweep.timeStamps[SliceID] - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
-		for (auto &entry : slices.second) {
-			OldDistance = Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], OldSweep, InterpTransform, (int)2);
-			for (int col = 0; col < 6; col++) {
-				InterpTransform_Delta = InterpTransform;
-				InterpTransform_Delta(col) = InterpTransform(col) + Delta;
-				Jacobian(cnt, col) = (Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], OldSweep, InterpTransform_Delta, (int)2) -
-					OldDistance) / Delta;
+	for (auto &slice : NewSweep.planePts)
+	{
+		tRatio = (NewSweep.timeStamps[slice.first]+1 - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
+		for (auto &idx : slice.second)
+		{
+			auto &x = NewSweep.ptCloud[slice.first][idx];
+			DistanceVec(cnt) = NewSweep.Dist2Plane(BackTransform(x.xyz, EstTransform, tRatio), OldSweep.ptCloud[x.nearPt1[0]][x.nearPt1[1]].xyz, OldSweep.ptCloud[x.nearPt2[0]][x.nearPt2[1]].xyz, OldSweep.ptCloud[x.nearPt3[0]][x.nearPt3[1]].xyz);
+			for (int col = 0; col < 6; col++)
+			{
+				InterpTransform_Delta = EstTransform;
+				InterpTransform_Delta(col) = EstTransform(col) + delta;
+				Jacobian(cnt, col) = (NewSweep.Dist2Plane(BackTransform(x.xyz, InterpTransform_Delta, tRatio), OldSweep.ptCloud[x.nearPt1[0]][x.nearPt1[1]].xyz, OldSweep.ptCloud[x.nearPt2[0]][x.nearPt2[1]].xyz, OldSweep.ptCloud[x.nearPt3[0]][x.nearPt3[1]].xyz)
+					- DistanceVec(cnt)) / delta;
+				//cout << Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], OldSweep, InterpTransform_Delta, (int)1) << " " << OldDistance << endl;
+				//cout << InterpTransform_Delta << " " << InterpTransform << endl;
 			}
-			DistanceVec(cnt) = OldDistance;
-			if (OldDistance < BiSq_threshold) {
-				W(cnt, cnt) = pow((1 - pow(OldDistance / BiSq_threshold, 2)), 2);
+			if (DistanceVec(cnt) < BiSq_threshold) {
+				W(cnt, cnt) = pow((1 - pow(DistanceVec(cnt) / BiSq_threshold, 2)), 2);
 			}
-			cout <<"Jacobian row: "<< cnt << endl;
+			//W(cnt, cnt) = 1;
 			cnt++;
 		}
 	}
+
+	//for (auto &slices : NewSweep.edgePts) {
+	//	SliceID = slices.first;
+	//	InterpTransform = EstTransform*(NewSweep.timeStamps[SliceID] - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
+	//	for (auto &entry : slices.second) {
+	//		OldDistance = Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], OldSweep, InterpTransform, (int)1);
+	//		for (int col = 0; col < 6; col++) {
+	//			InterpTransform_Delta = InterpTransform;
+	//			InterpTransform_Delta(col) = InterpTransform(col) + delta;
+	//			Jacobian(cnt, col) = (Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], OldSweep, InterpTransform_Delta, (int)1) -
+	//				OldDistance) / delta;
+	//			//cout << Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], OldSweep, InterpTransform_Delta, (int)1) << " " << OldDistance << endl;
+	//			//cout << InterpTransform_Delta << " " << InterpTransform << endl;
+	//		}
+	//		DistanceVec(cnt) = OldDistance;
+	//		if (OldDistance < BiSq_threshold) {
+	//			W(cnt, cnt) = pow((1 - pow(OldDistance / BiSq_threshold, 2)), 2);
+	//		}
+	//		//cout <<"Jacobian row: "<< cnt << "   Entries: "<< Jacobian.row(cnt) <<endl;
+	//		cnt++;
+	//	}
+	//}
+	////plane distance
+	//for (auto &slices : NewSweep.planePts) {
+	//	SliceID = slices.first;
+	//	InterpTransform = EstTransform*(NewSweep.timeStamps[SliceID] - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
+	//	for (auto &entry : slices.second) {
+	//		OldDistance = Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], OldSweep, InterpTransform, (int)2);
+	//		for (int col = 0; col < 6; col++) {
+	//			InterpTransform_Delta = InterpTransform;
+	//			InterpTransform_Delta(col) = InterpTransform(col) + delta;
+	//			Jacobian(cnt, col) = (Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], OldSweep, InterpTransform_Delta, (int)2) -
+	//				OldDistance) / delta;
+	//		}
+	//		DistanceVec(cnt) = OldDistance;
+	//		if (OldDistance < BiSq_threshold) {
+	//			W(cnt, cnt) = pow((1 - pow(OldDistance / BiSq_threshold, 2)), 2);
+	//		}
+	//		//cout <<"Jacobian row: "<< cnt << endl;
+	//		cnt++;
+	//	}
+	//}
 	
 	return Jacobian;
 }
@@ -132,7 +183,32 @@ VectorXd LMOptim::GetDistanceVec(Sweep &OldSweep, Sweep &NewSweep, VectorXd EstT
 	VectorXd InterpTransform;
 	VectorXd DistanceVec = VectorXd::Zero(NewSweep.numEdges + NewSweep.numPlanes);
 	int cnt = 0;
-	for (auto &slices : NewSweep.edgePts) {
+
+	double tRatio;
+	for (auto &slice : NewSweep.edgePts)
+	{
+		tRatio = (NewSweep.timeStamps[slice.first] - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
+		for (auto &idx : slice.second)
+		{
+			auto &x = NewSweep.ptCloud[slice.first][idx];
+			DistanceVec(cnt) = NewSweep.Dist2Line(BackTransform(x.xyz, EstTransform, tRatio), OldSweep.ptCloud[x.nearPt1[0]][x.nearPt1[1]].xyz, OldSweep.ptCloud[x.nearPt2[0]][x.nearPt2[1]].xyz);
+			cnt++;
+		}
+	}
+	cout << "edge only" << endl << DistanceVec << endl;
+	for (auto &slice : NewSweep.planePts)
+	{
+		tRatio = (NewSweep.timeStamps[slice.first] - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
+		for (auto &idx : slice.second)
+		{
+			auto &x = NewSweep.ptCloud[slice.first][idx];
+			DistanceVec(cnt) = NewSweep.Dist2Plane(BackTransform(x.xyz, EstTransform, tRatio), OldSweep.ptCloud[x.nearPt1[0]][x.nearPt1[1]].xyz, OldSweep.ptCloud[x.nearPt2[0]][x.nearPt2[1]].xyz, OldSweep.ptCloud[x.nearPt3[0]][x.nearPt3[1]].xyz);
+			cnt++;
+		}
+	}
+	cout << "all" << endl << DistanceVec << endl;
+
+	/*for (auto &slices : NewSweep.edgePts) {
 		SliceID = slices.first;
 		InterpTransform = EstTransform*(NewSweep.timeStamps[SliceID] - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
 		for (auto &ptID : slices.second) {
@@ -140,6 +216,7 @@ VectorXd LMOptim::GetDistanceVec(Sweep &OldSweep, Sweep &NewSweep, VectorXd EstT
 			cnt++;
 		}
 	}
+	cout << "edge only" << endl << DistanceVec << endl;
 	for (auto &slices : NewSweep.planePts) {
 		SliceID = slices.first;
 		InterpTransform = EstTransform*(NewSweep.timeStamps[SliceID] - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
@@ -148,21 +225,23 @@ VectorXd LMOptim::GetDistanceVec(Sweep &OldSweep, Sweep &NewSweep, VectorXd EstT
 			cnt++;
 		}
 	}
+	cout << "all" << endl << DistanceVec << endl;*/
 	return DistanceVec;
 }
 
 VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
-	bool iterate1 = 1, iterate2, converged;
+	bool iterate1 = 1, iterate2, converged = 0;
 	int cnt = 0;
 	int n = 3;
-	int MaxIter = 10; // Max iteration number
-	double lambda = 1, lambda_scale = 10; // Lambda for LM
-	double convergence_threshold_residual = 10, convergence_threshold_diffs = 0.1; // threshold for LM convergence
+	int MaxIter = 1000; // Max iteration number
+	double lambda = 10, lambda_scale = 10; 
+	double lambda_max = 10e6;// Lambda for LM
+	double convergence_threshold_residual = 10, convergence_threshold_diffs = 0.001; // threshold for LM convergence
 	double sum_diff = 0;
 	VectorXd prev_diffs = convergence_threshold_diffs*VectorXd::Zero(n);
 	VectorXd OldTransform(6), NewTransform, OldDistanceVec, NewDistanceVec;
 	MatrixXd Jacobian, JTWJ, JTWJ_Diag, W;
-	OldTransform << 0, 0, 0, 0, 0, 0;
+	OldTransform << 1.3, 0.8, 1.0, 0, 0, 0.15;
 	// Find feature points in NewSweep
 	cout << "Start looking for correspondences" << endl;
 	NewSweep.FindAllEdges();
@@ -175,6 +254,8 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 	while (iterate1) {
 		Jacobian = GetJacobian(OldDistanceVec, W, OldSweep, NewSweep, OldTransform);
 		JTWJ = Jacobian.transpose()*W*Jacobian;
+		//cout << "J: " << endl << Jacobian << endl;
+		//cout << "JTWJ: " << endl << JTWJ << endl;
 		JTWJ_Diag = MatrixXd::Zero(6, 6);
 		for (int diagIdx = 0; diagIdx < 6; diagIdx++) {
 			JTWJ_Diag(diagIdx, diagIdx) = JTWJ(diagIdx, diagIdx);
@@ -185,6 +266,7 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 			NewTransform = OldTransform - (JTWJ + lambda*JTWJ_Diag).inverse()*Jacobian.transpose()*W*OldDistanceVec;
 			// Compare
 			NewDistanceVec = GetDistanceVec(OldSweep, NewSweep, NewTransform);
+			//cout << NewDistanceVec << endl;
 			if (NewDistanceVec.norm() < OldDistanceVec.norm()) {
 				// improved: record n previous transform diffs, take new transform, tune lambda
 				for (int i = 0; i < n - 1; i++) {
@@ -192,6 +274,9 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 				}
 				prev_diffs(n - 1) = (NewDistanceVec - OldDistanceVec).norm();
 				lambda = lambda / lambda_scale;
+				if (lambda >= lambda_max) {
+					lambda = lambda_max;
+				}
 				iterate2 = 0;
 				OldTransform = NewTransform;
 			}
@@ -200,13 +285,19 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 				lambda = lambda*lambda_scale;
 			}
 			cout << "LM iteration " << cnt << endl;
+			cout << "Old T " << OldTransform << endl;
+			cout << "New T " << NewTransform << endl;
+			cout << "Distance norm " << NewDistanceVec.norm() << endl;
+			cout << "Lambda " << lambda << endl;
 			cnt++;
 			// convergence check: 1. Residual (d->0); 2. Variance of T in previous n iteration
 			if (NewDistanceVec.norm() < convergence_threshold_residual) {
 				converged = 1;
+				cout << "Residual converged!" << endl;
 			}
 			else if (prev_diffs.sum() < convergence_threshold_diffs) {
-				converged = 1;
+				converged = 0;
+				//cout << "Diffs converged!" << endl;
 			}
 			if (converged) {
 				iterate1 = 0;
@@ -221,5 +312,6 @@ VectorXd LMOptim::TransformEstimate(Sweep &OldSweep, Sweep &NewSweep) {
 		}
 	}
 
+	getchar();
 	return NewTransform;
 }

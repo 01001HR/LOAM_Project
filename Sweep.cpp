@@ -45,7 +45,7 @@ void Sweep::FindAllEdges(void)
 	// Loop through all current slices and find best feature points
 	for (int i = 0; i < ptCloud.size(); i++)
 	{
-		std::cout << "Finding Edges in i = " << i << std::endl;
+		//std::cout << "Finding Edges in i = " << i << std::endl;
 		FindEdges(ptCloud[i][0].sliceID);
 	}
 }
@@ -69,7 +69,7 @@ void Sweep::FindEdges(int sliceIdx)
 		distVec -= slice[firstPt + i].xyz;
 	}
 
-	curvatures[firstPt] = { distVec.norm() / slice[firstPt].xyz.norm(), (double)firstPt };
+	curvatures[firstPt] = { distVec.norm() / (slice[firstPt].xyz.norm()), (double)firstPt };
 
 	// calculate curvature values for all points after the first point
 	for (int i = firstPt + 1; i < lastPt; i++)
@@ -127,6 +127,8 @@ void Sweep::SortCurvatures(int sliceIdx, std::vector<std::vector<double>> &curve
 		}
 		planeTurn = !planeTurn;
 	}
+
+
 }
 
 bool Sweep::FindBestEdgePt(int sliceIdx, std::vector<std::vector<double>> &curveVec)
@@ -257,12 +259,11 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 {
 	// Back-transform the point to the beginning of the current sweep.
 	Vector3d x_ = BackTransform(curEdgePt.xyz, transform, (timeStamps[curEdgePt.sliceID] - tStart)/(tCur - tStart));
-
 	std::vector<int> bestPt = { 0,0 };
 	double bestDist = 10e10, tempDist;
 	std::vector<double> distances;
-
 	// Find the nearest edgepoint located in the +/- n-neighboring slices of the previous sweep
+	int n = 2; // n-neighboring
 	int j;
 	for (int i = -2; i < 3; i++)
 	{
@@ -283,7 +284,6 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 	}
 	curEdgePt.nearPt1 = bestPt;
 	bestDist = 10e10;
-
 	// Find edgepoint2 closest to nearPt1 located in either adjacent slice of the previous sweep
 	for (auto &i : { MyMod(curEdgePt.nearPt1[0] - 1, maxNumSlices), MyMod(curEdgePt.nearPt1[0] + 1, maxNumSlices) })
 	{
