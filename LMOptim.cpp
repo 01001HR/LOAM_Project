@@ -58,6 +58,7 @@ double LMOptim::Distance2EdgePlane(LoamPt &pt, Sweep &OldSweep, VectorXd &EstTra
 	return d;
 }
 
+<<<<<<< HEAD
 MatrixXd LMOptim::GetJacobian(VectorXd &DistanceVec,MatrixXd &W, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform) {
 	//int numPts = NewSweep.numEdges + NewSweep.numPlanes;
 	int numPts = NewSweep.numEdges;
@@ -81,6 +82,62 @@ MatrixXd LMOptim::GetJacobian(VectorXd &DistanceVec,MatrixXd &W, Sweep &OldSweep
 				else {
 					W(i, i) = pow((1 - pow(DistanceVec(i) / BiSq_threshold, 2)), 2);
 				}
+=======
+MatrixXd LMOptim::GetJacobian(VectorXd &DistanceVec, MatrixXd &W, Sweep &OldSweep, Sweep &NewSweep, VectorXd EstTransform) {
+	MatrixXd Jacobian = MatrixXd::Zero(NewSweep.numEdges + NewSweep.numPlanes, 6);
+	VectorXd InterpTransform_Delta, InterpTransform;
+	DistanceVec = VectorXd::Zero(NewSweep.numEdges + NewSweep.numPlanes);
+	W = MatrixXd::Zero(NewSweep.numEdges + NewSweep.numPlanes,  NewSweep.numEdges + NewSweep.numPlanes);
+	double BiSq_threshold = 10; //weighting func: w(x) = (1-(x/BiSq_threshold)^2)^2
+	double OldDistance, tRatio;
+	int cnt = 0;
+	int SliceID;
+	//edge distance
+
+	for (auto &slice : NewSweep.edgePts)
+	{
+		tRatio = (NewSweep.timeStamps[slice.first]+1 - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
+		InterpTransform = tRatio*EstTransform;
+		for (auto &idx : slice.second)
+		{
+			auto &x = NewSweep.ptCloud[slice.first][idx];
+			DistanceVec(cnt) = NewSweep.Dist2Line(BackTransform(x.xyz, EstTransform, tRatio), OldSweep.ptCloud[x.nearPt1[0]][x.nearPt1[1]].xyz, OldSweep.ptCloud[x.nearPt2[0]][x.nearPt2[1]].xyz);
+			for (int col = 0; col < 6; col++)
+			{
+				InterpTransform_Delta = EstTransform;
+				InterpTransform_Delta(col) = EstTransform(col) + delta;
+				Jacobian(cnt, col) = (NewSweep.Dist2Line(BackTransform(x.xyz, InterpTransform_Delta, tRatio), OldSweep.ptCloud[x.nearPt1[0]][x.nearPt1[1]].xyz, OldSweep.ptCloud[x.nearPt2[0]][x.nearPt2[1]].xyz)
+				- DistanceVec(cnt)) / delta;
+				//cout << NewSweep.Dist2Line(BackTransform(x.xyz, InterpTransform_Delta, tRatio), OldSweep.ptCloud[x.nearPt1[0]][x.nearPt1[1]].xyz, OldSweep.ptCloud[x.nearPt2[0]][x.nearPt2[1]].xyz)
+					//<< " " << DistanceVec(cnt) << endl;
+				//cout << InterpTransform_Delta << endl << EstTransform << endl;
+			}
+			if (DistanceVec(cnt) < BiSq_threshold) {
+				W(cnt, cnt) = pow((1 - pow(DistanceVec(cnt) / BiSq_threshold, 2)), 2);
+			}
+			//W(cnt, cnt) = 1;
+			cnt++;
+		}
+	}
+	for (auto &slice : NewSweep.planePts)
+	{
+		tRatio = (NewSweep.timeStamps[slice.first]+1 - NewSweep.tStart) / (NewSweep.tCur - NewSweep.tStart);
+		for (auto &idx : slice.second)
+		{
+			auto &x = NewSweep.ptCloud[slice.first][idx];
+			DistanceVec(cnt) = NewSweep.Dist2Plane(BackTransform(x.xyz, EstTransform, tRatio), OldSweep.ptCloud[x.nearPt1[0]][x.nearPt1[1]].xyz, OldSweep.ptCloud[x.nearPt2[0]][x.nearPt2[1]].xyz, OldSweep.ptCloud[x.nearPt3[0]][x.nearPt3[1]].xyz);
+			for (int col = 0; col < 6; col++)
+			{
+				InterpTransform_Delta = EstTransform;
+				InterpTransform_Delta(col) = EstTransform(col) + delta;
+				Jacobian(cnt, col) = (NewSweep.Dist2Plane(BackTransform(x.xyz, InterpTransform_Delta, tRatio), OldSweep.ptCloud[x.nearPt1[0]][x.nearPt1[1]].xyz, OldSweep.ptCloud[x.nearPt2[0]][x.nearPt2[1]].xyz, OldSweep.ptCloud[x.nearPt3[0]][x.nearPt3[1]].xyz)
+					- DistanceVec(cnt)) / delta;
+				//cout << Distance2EdgePlane(NewSweep.ptCloud[SliceID][entry], OldSweep, InterpTransform_Delta, (int)1) << " " << OldDistance << endl;
+				//cout << InterpTransform_Delta << " " << InterpTransform << endl;
+			}
+			if (DistanceVec(cnt) < BiSq_threshold) {
+				W(cnt, cnt) = pow((1 - pow(DistanceVec(cnt) / BiSq_threshold, 2)), 2);
+>>>>>>> 3c624b338322549276388e3a8f766ac207eaccbc
 			}
 		}
 	}

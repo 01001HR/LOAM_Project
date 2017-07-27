@@ -21,7 +21,11 @@ int main(void)
 	Sweep oldTestSweep, newTestSweep;
 
 	newTestSweep.transform.resize(6);
+<<<<<<< HEAD
 	newTestSweep.transform << 1.0, -0.5, 1.0, -0.1, 0.0, 0.2;
+=======
+	newTestSweep.transform << 1.0, 1.0, 1.0, 0.0, 0.0, M_PI/40.0;
+>>>>>>> 3c624b338322549276388e3a8f766ac207eaccbc
 
 	int i = 0;
 	for (auto &slice : orderedPoints)
@@ -68,6 +72,24 @@ int main(void)
 		newTestSweep.FindCorrespondences(i, oldTestSweep);
 	}
 	std::cout << "Done with correspondences" << std::endl;
+
+	std::cout << "EdgePts:" << std::endl;
+	for (auto &edgeKeyVal : newTestSweep.edgePts)
+	{
+		for (auto &idx : edgeKeyVal.second)
+		{
+			std::cout << " | "  << newTestSweep.ptCloud[edgeKeyVal.first][idx].dist << " | ";
+		}
+	}
+
+	std::cout << "PlanePts:" << std::endl;
+	for (auto &planeKeyVal : newTestSweep.planePts)
+	{
+		for (auto &idx : planeKeyVal.second)
+		{
+			std::cout << " | " << newTestSweep.ptCloud[planeKeyVal.first][idx].dist << " | ";
+		}
+	}
 
 	Vector3d p = { 1, 2, 3 }, p_, p2_, pf, pf2;
 

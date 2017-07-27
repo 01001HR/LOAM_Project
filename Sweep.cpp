@@ -165,7 +165,7 @@ bool Sweep::FindBestPlanePt(int sliceIdx, std::vector<std::vector<double>> &curv
 
 bool Sweep::EvaluateEdge(int sliceIdx, std::vector<double> &potentialPt) // Checks to make sure that no nearby points are drastically closer to the sensor
 {
-	double ptDist = ptCloud[sliceIdx][potentialPt[1]].xyz[0];
+	double ptDist = ptCloud[sliceIdx][potentialPt[1]].xyz.norm();
 	for (int i = -(kernalSize / 2); i < 0; i++)
 	{
 		if (potentialPt[1] + i < 0) {
@@ -191,16 +191,18 @@ bool Sweep::EvaluateEdge(int sliceIdx, std::vector<double> &potentialPt) // Chec
 	return true;
 }
 
-bool Sweep::EvaluatePlane(int sliceIdx, std::vector<double> &potentialPt) // Checks to make sure that no nearby points are drastically closer to the sensor
+bool Sweep::EvaluatePlane(int sliceIdx, std::vector<double> &potentialPt) // Checks to make sure that plane is not close to parallel with vector Xi
 {
 	Vector3d Xi = ptCloud[sliceIdx][potentialPt[1]].xyz;
-	Vector3d distVec = -Xi;
-	for (int i = -(kernalSize / 2); i < (kernalSize / 2) + 1; i++)
+	Vector3d distVec = { 0,0,0 };
+	for (int i = 1; i < (kernalSize / 2) + 1; i++)
 	{
-		distVec += (i >= 0 ? 1 : -1) * ptCloud[sliceIdx][potentialPt[1] + i].xyz;
+		distVec += (ptCloud[sliceIdx][potentialPt[1] + i].xyz - ptCloud[sliceIdx][potentialPt[1] - i].xyz);
 	}
-	// check if angle to plane pt is greater than 15deg
-	if (abs(distVec.dot(Xi) / (distVec.norm()*Xi.norm())) <= 0.95) // a*b = |a||b|cos(theta) ---> dot(a,b)/(|a||b|) = cos(theta)
+	//std::cout << potentialPt[1] << "th " << "Dist Vec = " << distVec << std::endl;
+	// check if angle to plane pt is greater than 30deg
+	double a = abs(distVec.dot(Xi) / (distVec.norm()*Xi.norm()));
+	if (abs(distVec.dot(Xi) / (distVec.norm()*Xi.norm())) <= 0.85) // a*b = |a||b|cos(theta) ---> dot(a,b)/(|a||b|) = cos(theta)
 	{
 		return true;
 	}
@@ -263,9 +265,13 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 	// Find the nearest edgepoint located in the +/- n-neighboring slices of the previous sweep
 	int n = 2; // n-neighboring
 	int j;
-	for (int i = curEdgePt.sliceID - n; i < curEdgePt.sliceID + n + 1; i++)
+	for (int i = -2; i < 3; i++)
 	{
-		j = MyMod(i, maxNumSlices);
+		j = MyMod(curEdgePt.sliceID + i, maxNumSlices);
+		if (j < 0)
+		{
+			std::cout << "Slice Idx = " << j << std::endl;
+		}
 		for (auto &oldIdx : OldSweep.edgePts[j])
 		{
 			tempDist = (OldSweep.ptCloud[j][oldIdx].xyz - x_).norm();
@@ -292,13 +298,13 @@ void Sweep::FindNearestLine(LoamPt &curEdgePt, Sweep &OldSweep)
 		}
 	}
 	curEdgePt.nearPt2 = bestPt;
-	//curEdgePt.dist = Dist2Line(x_, ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz, ptCloud[curEdgePt.nearPt2[0]][curEdgePt.nearPt2[1]].xyz); // this needs to be changed
+	curEdgePt.dist = Dist2Line(x_, ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz, ptCloud[curEdgePt.nearPt2[0]][curEdgePt.nearPt2[1]].xyz); // this needs to be changed
 }
 
-void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
+void Sweep::FindNearestPlane(LoamPt &curPlanePt, Sweep &OldSweep)
 {
 	// Back-transform the point to the beginning of the current sweep.
-	Vector3d x_ = BackTransform(curEdgePt.xyz, transform, (timeStamps[curEdgePt.sliceID] - tStart) / (tCur - tStart));
+	Vector3d x_ = BackTransform(curPlanePt.xyz, transform, (timeStamps[curPlanePt.sliceID] - tStart) / (tCur - tStart));
 
 	std::vector<int> bestPt = { 0,0 };
 	double bestDist = 10e10, tempDist;
@@ -306,10 +312,10 @@ void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 
 	// Find the nearest planePoint located in the +/- n-neighboring slices of the previous sweep
 	int j;
-	for (int i = curEdgePt.sliceID - 2; curEdgePt.sliceID + i < 3; i++)
+	for (int i = -2; i < 3; i++)
 	{
-		j = MyMod(i, maxNumSlices);
-		for (auto &oldIdx : OldSweep.edgePts[j])
+		j = MyMod(curPlanePt.sliceID + i, maxNumSlices);
+		for (auto &oldIdx : OldSweep.planePts[j])
 		{
 			tempDist = (OldSweep.ptCloud[j][oldIdx].xyz - x_).norm();
 			if (tempDist < bestDist)
@@ -319,31 +325,32 @@ void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 			}
 		}
 	}
-	curEdgePt.nearPt1 = bestPt;
+	std::cout << bestDist << std::endl;
+	curPlanePt.nearPt1 = bestPt;
 
 	bestDist = 10e10;
 	// Find the closest planePoint to nearPt1 in the same slice of the previous sweep
-	for (auto &oldIdx : OldSweep.edgePts[curEdgePt.nearPt1[0]])
+	for (auto &oldIdx : OldSweep.planePts[curPlanePt.nearPt1[0]])
 	{
-		if (oldIdx != curEdgePt.nearPt1[1])
+		if (oldIdx != curPlanePt.nearPt1[1])
 		{
-			tempDist = (OldSweep.ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz - OldSweep.ptCloud[curEdgePt.nearPt1[0]][oldIdx].xyz).norm();
+			tempDist = (OldSweep.ptCloud[curPlanePt.nearPt1[0]][curPlanePt.nearPt1[1]].xyz - OldSweep.ptCloud[curPlanePt.nearPt1[0]][oldIdx].xyz).norm();
 			if (tempDist < bestDist)
 			{
 				bestDist = tempDist;
-				bestPt = { curEdgePt.nearPt1[0], oldIdx };
+				bestPt = { curPlanePt.nearPt1[0], oldIdx };
 			}
 		}
 	}
-	curEdgePt.nearPt3 = bestPt;
+	curPlanePt.nearPt3 = bestPt;
 
 	bestDist = 10e10;
 	// Find the closest to planePoint to nearPt1 located in either adjacent slice of the previous sweep
-	for (auto &i : { MyMod(curEdgePt.nearPt1[0] - 1, maxNumSlices), MyMod(curEdgePt.nearPt1[0] + 1, maxNumSlices) })
+	for (auto &i : { MyMod(curPlanePt.nearPt1[0] - 1, maxNumSlices), MyMod(curPlanePt.nearPt1[0] + 1, maxNumSlices) })
 	{
-		for (auto &oldIdx : OldSweep.edgePts[i])
+		for (auto &oldIdx : OldSweep.planePts[i])
 		{
-			tempDist = (OldSweep.ptCloud[i][oldIdx].xyz - OldSweep.ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz).norm();
+			tempDist = (OldSweep.ptCloud[i][oldIdx].xyz - OldSweep.ptCloud[curPlanePt.nearPt1[0]][curPlanePt.nearPt1[1]].xyz).norm();
 			if (tempDist < bestDist)
 			{
 				bestDist = tempDist;
@@ -351,8 +358,8 @@ void Sweep::FindNearestPlane(LoamPt &curEdgePt, Sweep &OldSweep)
 			}
 		}
 	}
-	curEdgePt.nearPt2 = bestPt;
-	//curEdgePt.dist = Dist2Plane(x_, ptCloud[curEdgePt.nearPt1[0]][curEdgePt.nearPt1[1]].xyz, ptCloud[curEdgePt.nearPt2[0]][curEdgePt.nearPt2[1]].xyz, ptCloud[curEdgePt.nearPt3[0]][curEdgePt.nearPt3[1]].xyz); // this needs to be changed
+	curPlanePt.nearPt2 = bestPt;
+	curPlanePt.dist = Dist2Plane(x_, ptCloud[curPlanePt.nearPt1[0]][curPlanePt.nearPt1[1]].xyz, ptCloud[curPlanePt.nearPt2[0]][curPlanePt.nearPt2[1]].xyz, ptCloud[curPlanePt.nearPt3[0]][curPlanePt.nearPt3[1]].xyz); // this needs to be changed
 }
 
 void Sweep::TransformAll(VectorXd transform)
