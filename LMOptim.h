@@ -7,7 +7,6 @@ class LMOptim
 {
 public:
 	//variables
-<<<<<<< HEAD
 	// Numerical Jacobian
 	const double delta = pow(10, -3);
 	// Levenberg-Marquart
@@ -16,9 +15,6 @@ public:
 	const double lambda_ini = 10; // Initial lambda
 	const double lambda_scale = 10; // Lambda scale
 	const double lambda_max = 10e6;// Max lambda
-=======
-	double delta = 0;
->>>>>>> 3c624b338322549276388e3a8f766ac207eaccbc
 
 	//functions
 	LMOptim();
